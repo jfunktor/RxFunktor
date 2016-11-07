@@ -1,6 +1,8 @@
 package org.jfunktor.core.events.tests;
 
 import java.util.HashMap;
+import java.util.Map;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,7 +72,7 @@ public class RxSubjectTests {
 				System.out.println(String.format("3 : Received %s on Thread %s", event.getEventName(),Thread.currentThread().getName()));
 			});
 		
-		HashMap<String,String> params = new HashMap();
+		Map<String, Object> params = new HashMap();
 		
 		Event evt = new Event("TestEvent",params);
 		

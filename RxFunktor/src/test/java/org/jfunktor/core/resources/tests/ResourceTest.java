@@ -106,7 +106,7 @@ public class ResourceTest {
 	@Test
 	public void test_process_sample_resource() throws Exception{
 		HashMap<String, Object> context = new HashMap();
-		HashMap<String,String> params = new HashMap();
+		Map<String, Object> params = new HashMap();
 		params.put("name", "vijay");
 		//params.put("subaction", "birthplace");
 		context.put("action", "find");
@@ -157,7 +157,7 @@ public class ResourceTest {
 	@Test
 	public void test_process_sample_resource_with_exception() throws Exception{
 		HashMap<String, Object> context = new HashMap();
-		HashMap<String,String> params = new HashMap();
+		Map<String, Object> params = new HashMap();
 		params.put("name", "vijay");
 		params.put("subaction", "birthplace");
 		context.put("action", "find");

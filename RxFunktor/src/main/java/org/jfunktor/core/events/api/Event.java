@@ -8,7 +8,7 @@ public class Event {
 	private String eventName;
 	private Map eventDetails;
 	
-	public Event(String name, Map<String, String> params) {
+	public Event(String name, Map<String, Object> params) {
 		eventName = name;
 		eventDetails = params;
 		

@@ -499,7 +499,7 @@ public class EventBusTests {
 		
 		Subscription subscription1 = localEventBus.subscribeWithObserver("Channel1",EventBus.DeliveryMode.SYNC,consumer1);
 		Subscription subscription2 = localEventBus.subscribeWithObserver("Channel1",EventBus.DeliveryMode.SYNC,consumer2);
-		Subscription deadTopicSubscription = localEventBus.subscribeForDeadTopicsWithObserver(DeliveryMode.ASYNC, deadTopicConsumer);
+		Subscription deadTopicSubscription = localEventBus.subscribeForDeadTopicsWithObserver(DeliveryMode.SYNC, deadTopicConsumer);
 		
 	
 		localEventBus.publish("Channel1", evt);
