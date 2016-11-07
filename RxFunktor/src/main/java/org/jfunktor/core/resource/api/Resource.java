@@ -49,7 +49,7 @@ public class Resource {
 			throw new ResourceException(String.format("Action %s is undefined for this resource %s", event.getEventName(),resourceName));
 		}
 		
-		
+			
 		
 		return actionMap.get(event.getEventName()).apply(context, event);
 		
