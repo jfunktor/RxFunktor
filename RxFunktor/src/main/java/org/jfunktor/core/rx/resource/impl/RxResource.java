@@ -15,12 +15,14 @@ import rx.subjects.SerializedSubject;
 import rx.subjects.Subject;
 
 public class RxResource implements Resource<Event> {
-	
+
 	private String resource;
 	private String version;
 	
 	private Subject<Event,Event> resourceSubject = new SerializedSubject<Event,Event>(PublishSubject.create());
+	private Subject<Event,Event> defaultSubject = null;
 	private Map<String,ActionEntry<Event>> actionMap = new ConcurrentHashMap<String, ActionEntry<Event>>();
+
 	 
 	private class ActionEntry<Event>{
 		
@@ -109,6 +111,7 @@ public class RxResource implements Resource<Event> {
 	public RxResource(String resourcename, String version) {
 		resource = resourcename;
 		this.version = version;
+		this.defaultSubject = defineDefaultAction();
 	}
 
 	@Override
@@ -234,6 +237,28 @@ public class RxResource implements Resource<Event> {
 		resourceSubject.onCompleted();
 	}
 
+	@Override
+	public Observable<Event> getDefaultAction() {
+		return defaultSubject;
+	}
+
+
+	private Subject<Event, Event> defineDefaultAction() {
+		//create the subject
+		Subject<Event,Event> subject = new SerializedSubject<Event,Event>(PublishSubject.create());
+
+		//now connect to the resource subject using a filter
+		Subscription actionSubscription = resourceSubject.filter(event->{
+			boolean retVal = false;
+			if(!isActionDefined(event.getEventName())){
+				retVal = true;
+			}
+			return retVal;
+		}).subscribe(subject);
+
+
+		return subject;
+	}
 
 
 }
