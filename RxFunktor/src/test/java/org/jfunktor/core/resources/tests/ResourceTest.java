@@ -154,7 +154,7 @@ public class ResourceTest {
 	
 	
 	
-	@Test
+	/*@Test
 	public void test_process_sample_resource_with_exception() throws Exception{
 		HashMap<String, Object> context = new HashMap();
 		Map<String, Object> params = new HashMap();
@@ -192,7 +192,7 @@ public class ResourceTest {
 			
 		});*/
 		
-		sampleResource.process(context, requestEvent).observeOn(Schedulers.immediate()).subscribeOn(Schedulers.immediate()).subscribe(testSubscriber);
+		/*sampleResource.process(context, requestEvent).observeOn(Schedulers.immediate()).subscribeOn(Schedulers.immediate()).subscribe(testSubscriber);
 		
 	
 		testSubscriber.assertError(ResourceException.class);
@@ -202,7 +202,7 @@ public class ResourceTest {
 		
 		events.forEach(event ->{System.out.println(event);});
 		
-	}
+	}*/
 	
 
 }

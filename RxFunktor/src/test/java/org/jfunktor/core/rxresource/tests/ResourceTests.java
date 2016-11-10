@@ -772,7 +772,7 @@ public class ResourceTests {
 		Resource<Event> flightResource = new RxResource("Flight","1.0");
 		
 		
-		Observable<Event> flight_get = flightResource.defineAction("GET").concatMap(event->{
+		Observable<Event> flight_get = flightResource.defineAction("GET").flatMap(event->{
 			
 			return Observable.create(new OnSubscribe<Event>(){
 
@@ -820,9 +820,9 @@ public class ResourceTests {
 		
 		System.out.println("flightGetSubscriber1 "+flightGetSubscriber1);
 		
-		flightGetSubscriber1.onCompleted();
+		//flightGetSubscriber1.onCompleted();
 		
-		flightGetSubscriber1.assertCompleted();
+		//flightGetSubscriber1.assertCompleted();
 		flightGetSubscriber1.assertNoErrors();
 		
 		List<Event> responseList = flightGetSubscriber1.getOnNextEvents();
@@ -846,19 +846,19 @@ public class ResourceTests {
 		
 		//this is now simulating the actual request made
 		flightResource.onNext(requestEvent);
-		
+		flightResource.onNext(requestEvent);
 		//once the request is completed the observable will stop emitting
 		//flightResource.onCompleted();
 		
-		flightGetSubscriber2.onCompleted();
+		//flightGetSubscriber2.onCompleted();
 		//now lets validate the responses
-		flightGetSubscriber2.assertCompleted();
+		//flightGetSubscriber2.assertCompleted();
 		
 		flightGetSubscriber2.assertNoErrors();
 		
 		responseList = flightGetSubscriber2.getOnNextEvents();
 		
-		assertTrue(String.format("Expected response does not match actual : %s, Expected : %d",responseList.size(),1),responseList.size() == 1);
+		assertTrue(String.format("Expected response does not match actual : %s, Expected : %d",responseList.size(),2),responseList.size() == 2);
 		
 		responseList.forEach(evt->{
 			assertTrue(String.format("Event Name is not as expected %s", evt.getEventName()),evt.getEventName().equalsIgnoreCase("RESPONSE"));
@@ -868,5 +868,186 @@ public class ResourceTests {
 		
 		
 	}
-	
+
+	@Test
+	public void test_Rest_Flight_Resource_GET_multiple_flatmap_onComplete() throws ResourceException{
+
+		TestSubscriber flightGetSubscriber1 = new TestSubscriber();
+		TestSubscriber flightGetSubscriber2 = new TestSubscriber();
+
+		Resource<Event> flightResource = new RxResource("Flight","1.0");
+
+
+		Observable<Event> flight_get = flightResource.defineAction("GET").flatMap(event->{
+
+			return Observable.create(new OnSubscribe<Event>(){
+
+				@Override
+				public void call(Subscriber<? super Event> subscriber) {
+					System.out.println("Received Event : "+event.getEventName()+" subscriber "+subscriber);
+
+					System.out.println("Details : "+event.getEventDetails());
+
+					Map<String,Object> responseDetails = new HashMap();
+					List<String> flights = new ArrayList<String>();
+					flights.add("SK2345");
+					flights.add("1345");
+					responseDetails.put("flight", flights);
+
+					Event responseEvent = new Event("RESPONSE",responseDetails);
+					subscriber.onStart();
+					subscriber.onNext(responseEvent);
+
+					subscriber.onCompleted();
+
+
+				}
+
+			});
+		});
+
+
+		//now we can attach as many observers we want to the flight get
+		Subscription flight_subscription = flight_get.subscribe(flightGetSubscriber1);
+
+		//this will usually be during the request call
+		Map<String,Object> requestDetails = new HashMap();
+		requestDetails.put("query", "all flights");
+
+		Event requestEvent = new Event("GET",requestDetails);
+
+		//this is now simulating the actual request made
+		flightResource.onNext(requestEvent);
+
+		//once the request is completed the observable will stop emitting
+		//flightResource.onCompleted();
+
+		//now lets validate the responses
+
+		System.out.println("flightGetSubscriber1 "+flightGetSubscriber1);
+
+		//flightGetSubscriber1.onCompleted();
+
+		//flightGetSubscriber1.assertCompleted();
+		flightGetSubscriber1.assertNoErrors();
+
+		List<Event> responseList = flightGetSubscriber1.getOnNextEvents();
+
+		assertTrue(String.format("Expected response does not match actual : %s, Expected : %d",responseList.size(),1),responseList.size() == 1);
+
+		responseList.forEach(evt->{
+			assertTrue(String.format("Event Name is not as expected %s", evt.getEventName()),evt.getEventName().equalsIgnoreCase("RESPONSE"));
+			System.out.println("Response Event "+evt);
+		});
+
+		//simulating second request immediately
+		//now we can attach as many observers we want to the flight get
+		flight_subscription = flight_get.subscribe(flightGetSubscriber2);
+
+		//this will usually be during the request call
+		requestDetails = new HashMap();
+		requestDetails.put("query", "EK1234");
+
+		requestEvent = new Event("GET",requestDetails);
+
+		//this is now simulating the actual request made
+		flightResource.onNext(requestEvent);
+		flightResource.onNext(requestEvent);
+		//once the request is completed the observable will stop emitting
+		//flightResource.onCompleted();
+
+		//flightGetSubscriber2.onCompleted();
+		//now lets validate the responses
+		//flightGetSubscriber2.assertCompleted();
+
+		flightGetSubscriber2.assertNoErrors();
+
+		responseList = flightGetSubscriber2.getOnNextEvents();
+
+		assertTrue(String.format("Expected response does not match actual : %s, Expected : %d",responseList.size(),2),responseList.size() == 2);
+
+		responseList.forEach(evt->{
+			assertTrue(String.format("Event Name is not as expected %s", evt.getEventName()),evt.getEventName().equalsIgnoreCase("RESPONSE"));
+			System.out.println("Response Event "+evt);
+		});
+
+		flightResource.onCompleted();
+		flightGetSubscriber2.assertCompleted();
+		flightGetSubscriber1.assertCompleted();
+
+	}
+
+	@Test
+	public void test_Rest_Flight_Resource_default_actions() throws ResourceException {
+
+		TestSubscriber defaultSubscriber = new TestSubscriber();
+
+		TestSubscriber flightPostSubscriber = new TestSubscriber();
+
+		Resource<Event> flightResource = new RxResource("Flight","1.0");
+
+		Observable<Event> flight_post = flightResource.defineAction("POST").flatMap(event->{
+
+			return Observable.create(new OnSubscribe<Event>(){
+
+				@Override
+				public void call(Subscriber<? super Event> subscriber) {
+					System.out.println("Received Event : "+event.getEventName()+" subscriber "+subscriber);
+
+					System.out.println("Details : "+event.getEventDetails());
+
+					Map<String,Object> responseDetails = new HashMap();
+					List<String> flights = new ArrayList<String>();
+					flights.add("SK2345 Created");
+					flights.add("1345 Created");
+					responseDetails.put("flight", flights);
+
+					Event responseEvent = new Event("RESPONSE",responseDetails);
+					subscriber.onStart();
+					subscriber.onNext(responseEvent);
+
+					subscriber.onCompleted();
+
+
+				}
+
+			});
+		});
+
+		Subscription flightPostSubscription = flight_post.subscribe(flightPostSubscriber);
+
+		Observable<Event> flight_defaults = flightResource.getDefaultAction();
+
+		Subscription subscription = flight_defaults.subscribe(defaultSubscriber);
+
+		//this will usually be during the request call
+		Map<String,Object> requestDetails = new HashMap();
+		requestDetails.put("query", "all flights");
+
+		Event requestEvent1 = new Event("undefined_action",requestDetails);
+		Event requestEvent2 = new Event("GET",requestDetails);
+		Event requestEvent3 = new Event("PUT",requestDetails);
+
+		Event requestEvent4 = new Event("POST",requestDetails);
+		//this is now simulating the actual request made
+		flightResource.onNext(requestEvent1);
+		flightResource.onNext(requestEvent2);
+		flightResource.onNext(requestEvent3);
+		flightResource.onNext(requestEvent1);
+		flightResource.onNext(requestEvent4); //publish the POST event as well
+
+		flightPostSubscriber.assertNoErrors();
+
+		List<Event> postResponses = flightPostSubscriber.getOnNextEvents();
+
+		assertTrue(String.format("Expected response does not match actual : %s, Expected : %d",postResponses.size(),1),postResponses.size() == 1);
+
+		defaultSubscriber.assertNoErrors();
+
+		List<Event> defaultEvents = defaultSubscriber.getOnNextEvents();
+
+		assertTrue(String.format("Expected response does not match actual : %s, Expected : %d",defaultEvents.size(),4),defaultEvents.size() == 4);
+
+
+	}
 }

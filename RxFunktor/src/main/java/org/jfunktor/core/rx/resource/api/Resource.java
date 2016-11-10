@@ -22,6 +22,7 @@ public interface Resource<T> {
 	public boolean isActionDefined(String action);
 
 	public void onCompleted();
-	
 
+
+	Observable<T> getDefaultAction();
 }
