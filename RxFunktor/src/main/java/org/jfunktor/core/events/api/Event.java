@@ -3,6 +3,8 @@ package org.jfunktor.core.events.api;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableMap;
+
 public class Event {
 
 	private String eventName;
@@ -10,7 +12,7 @@ public class Event {
 	
 	public Event(String name, Map<String, Object> params) {
 		eventName = name;
-		eventDetails = params;
+		eventDetails = ImmutableMap.copyOf(params);
 		
 	}
 
