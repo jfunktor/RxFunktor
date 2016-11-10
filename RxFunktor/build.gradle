@@ -38,5 +38,6 @@ dependencies {
     compile "com.lmax:disruptor:$disruptor"
     compile "org.apache.commons:commons-vfs2:$vfs"
 	compile "io.reactivex:rxjava:$rxjava"
+	compile "com.google.guava:guava:$guava"
     
 }

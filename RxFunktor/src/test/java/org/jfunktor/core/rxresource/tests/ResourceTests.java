@@ -3,6 +3,7 @@ package org.jfunktor.core.rxresource.tests;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,134 @@ public class ResourceTests {
 		
 		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),2), responseEvents.size() == 2);
 	
+			
+	}
+
+	@Test
+	public void test_simple_resource_immutable_event() throws ResourceException {
+		
+		TestSubscriber subscriber = new TestSubscriber();
+		
+		Resource<Event> resource = new RxResource("Flight","1.0");
+		
+		resource.defineAction("find").map(event->{ event.getEventDetails().put("REQUESTOR", "RAM");return event;}).subscribe(subscriber);
+		
+		Map params = new HashMap();
+		params.put("REQUESTOR", "SAM");
+
+		
+		Event event = new Event("find",params);
+		
+		resource.onNext(event);
+		
+		
+		Event event2 = new Event("find",params);
+
+		resource.onNext(event2);
+
+		
+		List<UnsupportedOperationException> responseEvents = subscriber.getOnErrorEvents();
+		
+		assertTrue(String.format("Error Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
+
+			
+	}
+
+	@Test(expected=UnsupportedOperationException.class)
+	public void test_simple_resource_immutable_event_on_error_return() throws Throwable {
+		
+		TestSubscriber subscriber = new TestSubscriber();
+		
+		Resource<Event> resource = new RxResource("Flight","1.0");
+		
+		resource.defineAction("find").map(event->{ 
+		
+			event.getEventDetails().put("REQUESTOR", "RAM");
+			return event;
+			
+		})
+		.onErrorReturn(error->{
+			HashMap dataMap = new HashMap();
+			dataMap.put("Error", error);
+			Event errorEvent = new Event("Error",dataMap);
+			return errorEvent;
+		}).subscribe(subscriber);
+		
+		Map params = new HashMap();
+		params.put("REQUESTOR", "SAM");
+
+		
+		Event event = new Event("find",params);
+		
+		resource.onNext(event);
+		
+		
+		Event event2 = new Event("find",params);
+
+		resource.onNext(event2);
+
+		
+		subscriber.assertNoErrors();
+		List<Event> responseEvents = subscriber.getOnNextEvents();
+		
+		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
+		
+		//check whether we received any error events
+		Event errorEvent = responseEvents.get(0);
+		
+		assertTrue(String.format("Event Response does not match expected event Actual %s, Expected %s", "Error",errorEvent.getEventName()),errorEvent.getEventName().equals("Error"));
+
+		//here get the error and throw it to make the test pass as expected
+		throw (Throwable)errorEvent.getEventDetails().get("Error");
+			
+	}
+
+	@Test
+	public void test_simple_resource_immutable_event_on_error_resume() throws Throwable {
+		
+		TestSubscriber subscriber = new TestSubscriber();
+		
+		Resource<Event> resource = new RxResource("Flight","1.0");
+		
+		resource.defineAction("find").map(event->{ 
+		
+			event.getEventDetails().put("REQUESTOR", "RAM");
+			return event;
+			
+		})
+		.onErrorResumeNext(error->{
+			return Observable.create(subs->{
+				HashMap dataMap = new HashMap();
+				dataMap.put("Error", error);
+				Event errorEvent = new Event("Error",dataMap);
+				subs.onNext(errorEvent);
+			});
+		}).subscribe(subscriber);
+		
+		Map params = new HashMap();
+		params.put("REQUESTOR", "SAM");
+
+		
+		Event event = new Event("find",params);
+		
+		resource.onNext(event);
+		
+		
+		Event event2 = new Event("find",params);
+
+		resource.onNext(event2);
+
+		
+		subscriber.assertNoErrors();
+		List<Event> responseEvents = subscriber.getOnNextEvents();
+		
+		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
+		
+		//check whether we received any error events
+		Event errorEvent = responseEvents.get(0);
+		
+		assertTrue(String.format("Event Response does not match expected event Actual %s, Expected %s", "Error",errorEvent.getEventName()),errorEvent.getEventName().equals("Error"));
+
 			
 	}
 	
