@@ -1,5 +1,6 @@
 package org.jfunktor.core.rx.resource.impl;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,6 +11,7 @@ import org.jfunktor.core.events.api.Event;
 
 import rx.Observable;
 import rx.Subscription;
+import rx.functions.Func1;
 import rx.subjects.PublishSubject;
 import rx.subjects.SerializedSubject;
 import rx.subjects.Subject;
@@ -261,4 +263,25 @@ public class RxResource implements Resource<Event> {
 	}
 
 
+	/**
+	 * Wraps the given function safely
+	 * Translates any unhandled exceptions in the given function to a safe funtion which translates the error into a Error Event
+	 * @param in
+	 * @return
+	 */
+	public static Func1<Event,Event> safely(Func1<Event,Event> in){
+		return new Func1<Event, Event>() {
+			@Override
+			public Event call(Event event) {
+				try{
+					return in.call(event);
+				}catch(Throwable anyError){
+					HashMap dataMap = new HashMap();
+					dataMap.put(Event.ERROR, anyError);
+					Event errorEvent = new Event(Event.ERROR_EVENT,dataMap);
+					return errorEvent;
+				}
+			}
+		};
+	}
 }

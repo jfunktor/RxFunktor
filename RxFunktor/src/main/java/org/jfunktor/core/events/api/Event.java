@@ -9,7 +9,9 @@ public class Event {
 
 	private String eventName;
 	private Map eventDetails;
-	
+	public static final String ERROR_EVENT = "Error";
+	public static final String ERROR = "Error";
+
 	public Event(String name, Map<String, Object> params) {
 		eventName = name;
 		eventDetails = ImmutableMap.copyOf(params);
@@ -29,7 +31,7 @@ public class Event {
 		return "Event [eventName=" + eventName + ", eventDetails=" + eventDetails + "]";
 	}
 	
-	
+
 	
 
 }

@@ -1,29 +1,26 @@
 package org.jfunktor.core.rxresource.tests;
 
-import static org.junit.Assert.*;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.jfunktor.core.events.api.Event;
 import org.jfunktor.core.resource.api.ResourceException;
 import org.jfunktor.core.rx.resource.api.Resource;
 import org.jfunktor.core.rx.resource.impl.RxResource;
-import org.junit.Test;
+import static org.jfunktor.core.rx.resource.impl.RxResource.safely;
 
+import org.junit.Test;
 import rx.Observable;
 import rx.Observable.OnSubscribe;
-import rx.Observer;
 import rx.Subscriber;
 import rx.Subscription;
-import rx.observables.AsyncOnSubscribe;
 import rx.observers.TestSubscriber;
 import rx.schedulers.Schedulers;
-import rx.subjects.PublishSubject;
-import rx.subjects.Subject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ResourceTests {
 	
@@ -180,7 +177,99 @@ public class ResourceTests {
 
 			
 	}
-	
+
+	@Test
+	public void test_simple_resource_immutable_event_on_exception_resume() throws Throwable {
+
+		TestSubscriber subscriber = new TestSubscriber();
+
+		Resource<Event> resource = new RxResource("Flight","1.0");
+
+
+
+		resource.defineAction("find").map(event->{
+            try {
+                event.getEventDetails().put("REQUESTOR", "RAM");
+                return event;
+            }catch(Throwable error){
+                HashMap dataMap = new HashMap();
+                dataMap.put("Error", error);
+                Event errorEvent = new Event("Error",dataMap);
+                return errorEvent;
+            }
+
+		}).subscribe(subscriber);
+
+		Map params = new HashMap();
+		params.put("REQUESTOR", "SAM");
+
+
+		Event event = new Event("find",params);
+
+		resource.onNext(event);
+
+
+		Event event2 = new Event("find",params);
+
+		resource.onNext(event2);
+
+
+		subscriber.assertNoErrors();
+		List<Event> responseEvents = subscriber.getOnNextEvents();
+
+		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),2), responseEvents.size() == 2);
+
+
+		//check whether we received any error events
+        responseEvents.forEach(errorEvent->{
+            assertTrue(String.format("Event Response does not match expected event Actual %s, Expected %s", "Error",errorEvent.getEventName()),errorEvent.getEventName().equals("Error"));
+        });
+
+
+	}
+
+    @Test
+    public void test_simple_resource_immutable_event_on_exception_resume_with_safely() throws Throwable {
+
+        TestSubscriber subscriber = new TestSubscriber();
+
+        Resource<Event> resource = new RxResource("Flight","1.0");
+
+
+
+        resource.defineAction("find").map(safely(event->{
+            event.getEventDetails().put("REQUESTOR", "RAM");
+            return event;
+        })).subscribe(subscriber);
+
+        Map params = new HashMap();
+        params.put("REQUESTOR", "SAM");
+
+
+        Event event = new Event("find",params);
+
+        resource.onNext(event);
+
+
+        Event event2 = new Event("find",params);
+
+        resource.onNext(event2);
+
+
+        subscriber.assertNoErrors();
+        List<Event> responseEvents = subscriber.getOnNextEvents();
+
+        assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),2), responseEvents.size() == 2);
+
+
+        //check whether we received any error events
+        responseEvents.forEach(errorEvent->{
+            assertTrue(String.format("Event Response does not match expected event Actual %s, Expected %s", "Error",errorEvent.getEventName()),errorEvent.getEventName().equals("Error"));
+        });
+
+
+    }
+
 	@Test
 	public void test_simple_resource_response() throws ResourceException{
 
