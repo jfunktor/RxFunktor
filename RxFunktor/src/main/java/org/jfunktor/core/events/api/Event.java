@@ -11,6 +11,8 @@ public class Event {
 	private Map eventDetails;
 	public static final String ERROR_EVENT = "Error";
 	public static final String ERROR = "Error";
+	public static final String EVENT_TYPE = "event-type";
+	public static final String SOURCE_EVENT = "source-event";
 
 	public Event(String name, Map<String, Object> params) {
 		eventName = name;

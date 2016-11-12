@@ -11,6 +11,8 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.jfunktor.core.rx.resource.impl.RxResource.safely;
 
@@ -27,10 +29,12 @@ public class FunctionalResourceTests {
     private static final String POST = "post";
     private static final String PUT = "put";
     private static final String DELETE = "delete";
+    private static final String ORDERS_EVENT = "Orders";
+
     private static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 
     private Resource<Event> createOrderResource() throws ResourceException {
-        ArrayList<Order> orderArrayList = new ArrayList();
+        List<Order> orderDB = createOrderDB();
 
         Resource orders = new RxResource(RESOURCE_ORDERS, ORDERS_VERSION);
 
@@ -61,10 +65,25 @@ public class FunctionalResourceTests {
             }catch(ParseException e){
                 Map<String,Object> errordetails = new HashMap();
                 errordetails.put(Event.ERROR,e);
-                //Event e = new Event();
+                Event evt = new Event(Event.ERROR_EVENT,errordetails);
+                return evt;
             }
 
-            return event;
+
+
+            if(deliverOn != null){
+                deliverFromDate = deliverOnDate;
+                deliverToDate = deliverToDate;
+            }
+            List<Order> results = getMatchingOrders(orderDB,shippedTo,deliverFromDate,deliverToDate);
+
+
+            Map<String,Object> responseDetails = new HashMap();
+            responseDetails.put(Event.EVENT_TYPE,ORDERS_EVENT);
+            responseDetails.put(ORDERS_EVENT,results);
+            responseDetails.put(Event.SOURCE_EVENT,event);
+            Event resultEvent = new Event(ORDERS_EVENT,responseDetails);
+            return resultEvent;
         }));
 
 
@@ -81,6 +100,30 @@ public class FunctionalResourceTests {
         }));
 
         return orders;
+    }
+
+    private List<Order> createOrderDB() {
+        ArrayList<Order> orders = new ArrayList();
+        return orders;
+    }
+
+    private List<Order> getMatchingOrders(List<Order> orderDB,String shippedTo, Date deliverFromDate, Date deliverToDate) {
+        Stream<Order> orderStream = orderDB.stream().filter(order -> {
+            boolean retVal = false;
+            if (!shippedTo.equals("*")) {
+                if (order.getShipperName().equals(shippedTo) && (order.getDeliverBy().after(deliverFromDate) && order.getDeliverBy().before(deliverToDate))
+                        || order.getDeliverBy().equals(deliverFromDate)) {
+                    retVal = true;
+                }
+            } else {
+                if ((order.getDeliverBy().after(deliverFromDate) && order.getDeliverBy().before(deliverToDate))
+                        || order.getDeliverBy().equals(deliverFromDate)) {
+                    retVal = true;
+                }
+            }
+            return retVal;
+        });
+        return orderStream.collect(Collectors.toList());
     }
 
     @Test
@@ -147,6 +190,14 @@ class Order{
 
     public List<Item> getItems() {
         return items;
+    }
+
+    public Date getDeliverBy() {
+        return deliverBy;
+    }
+
+    public Date getOrderDate() {
+        return orderDate;
     }
 
     @Override
