@@ -6,6 +6,7 @@ import org.jfunktor.core.rx.resource.api.Resource;
 import org.jfunktor.core.rx.resource.impl.RxResource;
 import org.junit.Test;
 import rx.Observable;
+import rx.observers.TestSubscriber;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.jfunktor.core.rx.resource.impl.RxResource.safely;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by vj on 11/11/16.
@@ -30,21 +32,35 @@ public class FunctionalResourceTests {
     private static final String PUT = "put";
     private static final String DELETE = "delete";
     private static final String ORDERS_EVENT = "Orders";
+    private static final String NEW_ORDER_EVENT = "new-order";
 
     private static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 
     private Resource<Event> createOrderResource() throws ResourceException {
         List<Order> orderDB = createOrderDB();
+        List<Item> itemDB = createItemDB();
+        int orderIdCounter = 0;
 
         Resource orders = new RxResource(RESOURCE_ORDERS, ORDERS_VERSION);
 
         //orders resource actions
         Observable<Event> getAction = orders.defineAction(GET).map(safely(event->{
+
             Map details = event.getEventDetails();
+
+            if(details.get(Event.EVENT_TYPE) == null || (!((String)details.get(Event.EVENT_TYPE)).equalsIgnoreCase("get-orders"))){
+                Map<String,Object> errordetails = new HashMap();
+                errordetails.put(Event.ERROR,new IllegalArgumentException("Invalid arguments for event"));
+                Event evt = new Event(Event.ERROR_EVENT,errordetails);
+                return evt;
+            }
+
             String shippedTo = (String)details.get("shipped-to");
             String deliverOn = (String)details.getOrDefault("deliver-by",null);
             String deliverFrom = (String)details.getOrDefault("deliver-from",null);
             String deliverTo = (String)details.getOrDefault("deliver-to",null);
+
+            assert (shippedTo != null || shippedTo.trim().length() > 0) : "shipped-to cannot be empty or null";
 
             Date deliverOnDate = null;
             Date deliverFromDate = null;
@@ -87,20 +103,95 @@ public class FunctionalResourceTests {
         }));
 
 
-        Observable<Event> putAction = orders.defineAction(PUT).map(safely(event->{
-            return event;
-        }));
-
         Observable<Event> postAction = orders.defineAction(POST).map(safely(event->{
-            return event;
-        }));
+            Map details = event.getEventDetails();
 
-        Observable<Event> deleteAction = orders.defineAction(DELETE).map(safely(event->{
-            return event;
+            if(details.get(Event.EVENT_TYPE) == null || (!((String)details.get(Event.EVENT_TYPE)).equalsIgnoreCase("post-orders"))){
+                Map<String,Object> errordetails = new HashMap();
+                errordetails.put(Event.ERROR,new IllegalArgumentException("Invalid arguments for event"));
+                Event evt = new Event(Event.ERROR_EVENT,errordetails);
+                return evt;
+            }
+
+            Order newOrder = createNewOrder(orderDB, itemDB, orderIdCounter, details);
+
+            Map<String,Object> responseDetails = new HashMap();
+            responseDetails.put(Event.EVENT_TYPE,NEW_ORDER_EVENT);
+            responseDetails.put(NEW_ORDER_EVENT,newOrder);
+            responseDetails.put(Event.SOURCE_EVENT,event);
+            Event resultEvent = new Event(NEW_ORDER_EVENT,responseDetails);
+
+            return resultEvent;
         }));
 
         return orders;
     }
+
+
+    private List<Item> createItemDB() {
+        ArrayList<Item> items = new ArrayList<>();
+        items.add(new Item("1","Pencils","School Pencils",5000));
+        items.add(new Item("2","Notebooks","School Notebooks",2000));
+        items.add(new Item("3","Box","School Box",15000));
+        items.add(new Item("4","Chocolates","Kinder Joy chocolates",2000));
+        items.add(new Item("5","Bags","School Bags",1500));
+        items.add(new Item("6","Shoes","School Shoes",50));
+        items.add(new Item("7","Sport-Shoes","School Sport shoes",1500));
+        items.add(new Item("8","Chalk","Blackboard chalks",25000));
+        return items;
+    }
+
+    private Order createNewOrder(List<Order> orderdb,List<Item> itemsdb,int orderIdCounter,Map<String,Object> details){
+        String shipperName = (String)details.get("shipperName");
+        Map<String,String> addressMap = (Map<String,String>)details.get("shipperAddress");
+        String deliverBy = (String)details.get("deliverBy");
+        List<String> itemsList = (List<String>)details.get("items");
+
+        List<LineItem> lineItems = getLineItems(itemsdb,itemsList);
+
+        Order newOrder = new Order(generateOrderId(orderIdCounter),shipperName,
+                getAddress(addressMap),lineItems,Calendar.getInstance().getTime(),deliverBy);
+
+        //insert the order in to orderdb
+        orderdb.add(newOrder);
+        return newOrder;
+
+    }
+
+    private List<LineItem> getLineItems(List<Item> itemsdb,List<String> itemsList) {
+        Stream<LineItem> lineItemStream = itemsList.stream().map(itemid->{
+            Stream<Item> items = itemsdb.stream().filter(item -> {
+                boolean retVal = false;
+                if(item.getItemId().equalsIgnoreCase(itemid)){
+                    retVal = true;
+                }
+                return retVal;
+            });
+            if(items.findFirst().isPresent()){
+                Item i = items.findFirst().get();
+                LineItem litem = new LineItem(i.getItemId(),i.getItemName(),i.getItemDescription(),1);
+                return litem;
+            }else{
+                return null;
+            }
+        });
+        return lineItemStream.collect(Collectors.toList());
+    }
+
+    private Address getAddress(Map<String, String> addressMap) {
+        String address1 = addressMap.get("address1");
+        String address2 = addressMap.get("address2");
+        String city = addressMap.get("city");
+        String country = addressMap.get("country");
+
+        return new Address(address1,address2,city,country);
+
+    }
+
+    private String generateOrderId(int counter){
+        return (new Integer(counter + 1)).toString();
+    }
+
 
     private List<Order> createOrderDB() {
         ArrayList<Order> orders = new ArrayList();
@@ -110,14 +201,13 @@ public class FunctionalResourceTests {
     private List<Order> getMatchingOrders(List<Order> orderDB,String shippedTo, Date deliverFromDate, Date deliverToDate) {
         Stream<Order> orderStream = orderDB.stream().filter(order -> {
             boolean retVal = false;
-            if (!shippedTo.equals("*")) {
-                if (order.getShipperName().equals(shippedTo) && (order.getDeliverBy().after(deliverFromDate) && order.getDeliverBy().before(deliverToDate))
-                        || order.getDeliverBy().equals(deliverFromDate)) {
-                    retVal = true;
-                }
-            } else {
-                if ((order.getDeliverBy().after(deliverFromDate) && order.getDeliverBy().before(deliverToDate))
-                        || order.getDeliverBy().equals(deliverFromDate)) {
+            if ((order.getDeliverBy().after(deliverFromDate) && order.getDeliverBy().before(deliverToDate))
+                    || order.getDeliverBy().equals(deliverFromDate)) {
+                if(!shippedTo.equals("*")){
+                    if(order.getShipperName().equals(shippedTo)){
+                        retVal = true;
+                    }
+                }else{
                     retVal = true;
                 }
             }
@@ -126,12 +216,60 @@ public class FunctionalResourceTests {
         return orderStream.collect(Collectors.toList());
     }
 
+     private Order findOrderById(List<Order> orderDB,String orderid){
+        Stream<Order> orderStream = orderDB.stream().filter(order -> {
+            boolean retVal = false;
+            if(order.getOrderId().equals(orderid)){
+                retVal = true;
+            }
+            return retVal;
+
+        });
+        return orderStream.findFirst().get();
+    }
+
     @Test
     public void test_order_create()throws ResourceException{
         Resource orders = createOrderResource();
-        //orders.getAction(GET)
+        TestSubscriber<Event> subscriber = new TestSubscriber<>();
+        Observable<Event> createAction = orders.getAction(POST);
+        createAction.subscribe(subscriber);
 
+        Event createEvent = createNewOrderEvent("Vijay");
+
+        orders.onNext(createEvent);
+
+        subscriber.assertNoErrors();
+        List<Event> responseEvents = subscriber.getOnNextEvents();
+
+        assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
+
+        Event evt = responseEvents.get(0);
+        assertTrue(String.format("Response event name is not as expected. Action %s, Expected %s",evt.getEventName(),"new-order"),evt.getEventName().equalsIgnoreCase("new-oder"));
+        System.out.println("Event details : "+evt.getEventDetails());
     }
+
+    private Event createNewOrderEvent(String shippedto) {
+
+        Map<String,String> address = new HashMap<>();
+        address.put("address1","New York");
+        address.put("address2","Washington");
+        address.put("city","New York");
+        address.put("country","USA");
+
+        List<String> itemlist = new ArrayList();
+        itemlist.add("2");
+        itemlist.add("9");
+
+        Map<String,Object> details = new HashMap<>();
+        details.put(Event.EVENT_TYPE,"new-order");
+        details.put("shipperName",shippedto);
+        details.put("shipperAddress",address);
+        details.put("deliverBy","10-12-2016");
+        Event createevent = new Event("POST",details);
+        return createevent;
+    }
+
 
     @Test
     public void test_order_update(){
@@ -144,24 +282,45 @@ public class FunctionalResourceTests {
     }
 }
 
+class OrderNotFoundException extends Exception{
+    public OrderNotFoundException() {
+    }
+
+    public OrderNotFoundException(String s) {
+        super(s);
+    }
+
+    public OrderNotFoundException(String s, Throwable throwable) {
+        super(s, throwable);
+    }
+
+    public OrderNotFoundException(Throwable throwable) {
+        super(throwable);
+    }
+
+    public OrderNotFoundException(String s, Throwable throwable, boolean b, boolean b1) {
+        super(s, throwable, b, b1);
+    }
+}
+
 class Order{
     private String orderId;
     private String shipperName;
     private Address shipperAddress;
     private Date deliverBy;
     private Date orderDate;
-    private List<Item> items;
+    private List<LineItem> items;
 
     private static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 
-    public Order(String orderId, String shipperName, Address shipperAddress, List<Item> items) {
+    public Order(String orderId, String shipperName, Address shipperAddress, List<LineItem> items) {
         this.orderId = orderId;
         this.shipperName = shipperName;
         this.shipperAddress = shipperAddress;
         this.items = items;
     }
 
-    public Order(String orderId, String shipperName, Address shipperAddress, List<Item> items,String orderdate,String deliverby) {
+    public Order(String orderId, String shipperName, Address shipperAddress, List<LineItem> items,String orderdate,String deliverby) {
         this.orderId = orderId;
         this.shipperName = shipperName;
         this.shipperAddress = shipperAddress;
@@ -176,6 +335,29 @@ class Order{
         }
     }
 
+    public Order(String orderId, String shipperName, Address shipperAddress, List<LineItem> items,Date orderdate,Date deliverby) {
+        this.orderId = orderId;
+        this.shipperName = shipperName;
+        this.shipperAddress = shipperAddress;
+        this.items = items;
+        orderDate = orderdate;
+        deliverBy = deliverby;
+    }
+
+    public Order(String orderId, String shipperName, Address shipperAddress, List<LineItem> items,Date orderdate,String deliverby) {
+        this.orderId = orderId;
+        this.shipperName = shipperName;
+        this.shipperAddress = shipperAddress;
+        this.items = items;
+        this.orderDate = orderdate;
+        try {
+            deliverBy = dateFormat.parse(deliverby);
+        }catch(ParseException e){
+            deliverBy = orderDate;
+        }
+    }
+
+
     public String getOrderId() {
         return orderId;
     }
@@ -188,7 +370,7 @@ class Order{
         return shipperAddress;
     }
 
-    public List<Item> getItems() {
+    public List<LineItem> getLineItems() {
         return items;
     }
 
@@ -206,7 +388,7 @@ class Order{
                 "orderId='" + orderId + '\'' +
                 ", shipperName='" + shipperName + '\'' +
                 ", shipperAddress=" + shipperAddress +
-                ", items=" + items +
+                ", lineItems=" + items +
                 '}';
     }
 }
@@ -247,6 +429,45 @@ class Address{
                 ", address2='" + address2 + '\'' +
                 ", city='" + city + '\'' +
                 ", country='" + country + '\'' +
+                '}';
+    }
+}
+class LineItem{
+    private String itemId;
+    private String itemName;
+    private String itemDescription;
+    private int quantity;
+
+    public LineItem(String itemId, String itemName, String itemDescription, int quantity) {
+        this.itemId = itemId;
+        this.itemName = itemName;
+        this.itemDescription = itemDescription;
+        this.quantity = quantity;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public String getItemName() {
+        return itemName;
+    }
+
+    public String getItemDescription() {
+        return itemDescription;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    @Override
+    public String toString() {
+        return "LineItem{" +
+                "itemId='" + itemId + '\'' +
+                ", itemName='" + itemName + '\'' +
+                ", itemDescription='" + itemDescription + '\'' +
+                ", quantity=" + quantity +
                 '}';
     }
 }

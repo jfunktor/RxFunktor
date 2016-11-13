@@ -244,6 +244,16 @@ public class RxResource implements Resource<Event> {
 		return defaultSubject;
 	}
 
+	@Override
+	public Observable<Event> getAction(String action) throws ResourceException{
+		String actionLower = action.toLowerCase();
+		if(!isActionDefined(actionLower)){
+			throw new ResourceException(String.format("Action %s is not defined", action));
+		}
+
+		return actionMap.get(action).actionSubject;
+	}
+
 
 	private Subject<Event, Event> defineDefaultAction() {
 		//create the subject

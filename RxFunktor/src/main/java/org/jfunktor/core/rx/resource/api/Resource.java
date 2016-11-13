@@ -25,4 +25,6 @@ public interface Resource<T> {
 
 
 	Observable<T> getDefaultAction();
+
+    Observable<Event> getAction(String action)throws ResourceException;
 }
