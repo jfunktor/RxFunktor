@@ -4,10 +4,12 @@ import org.jfunktor.core.events.api.Event;
 import org.jfunktor.core.resource.api.ResourceException;
 
 import rx.Observable;
+import rx.functions.Func1;
+
 
 public interface Resource<T> {
 	
-	public Observable<T> defineAction(String action)throws ResourceException;
+	public Observable<T> defineAction(String action, Func1<T,T> function)throws ResourceException;
 
 	public void onNext(T event);
 
