@@ -33,7 +33,7 @@ public class ResourceTests {
 		
 		Resource<Event> resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
 		
 		Map params = new HashMap();
 		
@@ -57,7 +57,7 @@ public class ResourceTests {
 		
 		Resource<Event> resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find").map(event->{ event.getEventDetails().put("REQUESTOR", "RAM");return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{ event.getEventDetails().put("REQUESTOR", "RAM");return event;}).subscribe(subscriber);
 		
 		Map params = new HashMap();
 		params.put("REQUESTOR", "SAM");
@@ -87,7 +87,7 @@ public class ResourceTests {
 		
 		Resource<Event> resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find").map(event->{ 
+		resource.defineAction("find",event->{
 		
 			event.getEventDetails().put("REQUESTOR", "RAM");
 			return event;
@@ -117,7 +117,7 @@ public class ResourceTests {
 		subscriber.assertNoErrors();
 		List<Event> responseEvents = subscriber.getOnNextEvents();
 		
-		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
+		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),2), responseEvents.size() == 2);
 		
 		//check whether we received any error events
 		Event errorEvent = responseEvents.get(0);
@@ -136,7 +136,7 @@ public class ResourceTests {
 		
 		Resource<Event> resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find").map(event->{ 
+		resource.defineAction("find",event->{
 		
 			event.getEventDetails().put("REQUESTOR", "RAM");
 			return event;
@@ -168,7 +168,7 @@ public class ResourceTests {
 		subscriber.assertNoErrors();
 		List<Event> responseEvents = subscriber.getOnNextEvents();
 		
-		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
+		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),2), responseEvents.size() == 2);
 		
 		//check whether we received any error events
 		Event errorEvent = responseEvents.get(0);
@@ -187,7 +187,7 @@ public class ResourceTests {
 
 
 
-		resource.defineAction("find").map(event->{
+		resource.defineAction("find",event->{
             try {
                 event.getEventDetails().put("REQUESTOR", "RAM");
                 return event;
@@ -237,7 +237,7 @@ public class ResourceTests {
 
 
 
-        resource.defineAction("find").map(safely(event->{
+        resource.defineAction("find",safely(event->{
             event.getEventDetails().put("REQUESTOR", "RAM");
             return event;
         })).subscribe(subscriber);
@@ -277,7 +277,7 @@ public class ResourceTests {
 		
 		Resource resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
 		
 		Map params = new HashMap();
 		
@@ -301,7 +301,7 @@ public class ResourceTests {
 		TestSubscriber<Event> subscriber = new TestSubscriber();
 		
 		Resource resource = new RxResource("Flight","1.0");
-		resource.defineAction("find").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
 
 		resource.deactivateAction("find");
 		
@@ -341,9 +341,11 @@ public class ResourceTests {
 	public void test_simple_resource_undefine() throws ResourceException{
 
 		TestSubscriber<Event> subscriber = new TestSubscriber();
+		TestSubscriber<Event> defaultSubscriber = new TestSubscriber();
 		
 		Resource resource = new RxResource("Flight","1.0");
-		Subscription subscription = resource.defineAction("find").map(event->{return event;}).subscribe(subscriber);
+		Subscription subscription = resource.defineAction("find",event->{return event;}).subscribe(subscriber);
+		Subscription defaultSubscription = resource.getDefaultAction().subscribe(defaultSubscriber);
 
 		Map params = new HashMap();
 		
@@ -380,7 +382,7 @@ public class ResourceTests {
 		
 		
 		//redefine the action
-		subscription = resource.defineAction("find").map(evt->{return evt;}).subscribe(subscriber);
+		subscription = resource.defineAction("find",evt->{return evt;}).subscribe(subscriber);
 		
 		event = new Event("find",params);
 		
@@ -394,7 +396,9 @@ public class ResourceTests {
 		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),2), responseEvents.size() == 2);
 		assertTrue("Resource action is not activated",resource.isActionActive("find"));
 		assertTrue("Resource action is not defined",resource.isActionDefined("find"));
-		
+
+		subscription.unsubscribe();
+		defaultSubscription.unsubscribe();
 	}
 
 	@Test
@@ -403,7 +407,7 @@ public class ResourceTests {
 		TestSubscriber<Event> subscriber = new TestSubscriber();
 		
 		Resource resource = new RxResource("Flight","1.0");
-		Subscription subscription = resource.defineAction("find").map(event->{return event;}).subscribe(subscriber);
+		Subscription subscription = resource.defineAction("find",event->{return event;}).subscribe(subscriber);
 
 		Map params = new HashMap();
 		
@@ -463,7 +467,7 @@ public class ResourceTests {
 		TestSubscriber<Event> subscriber = new TestSubscriber();
 		
 		Resource resource = new RxResource("Flight","1.0");
-		resource.defineAction("find").observeOn(Schedulers.immediate()).map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
 
 		Map params = new HashMap();
 		
@@ -535,11 +539,11 @@ public class ResourceTests {
 		
 		RxResource resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
 		
-		resource.defineAction("create").map(event->{return event;}).subscribe(subscriber);
-		resource.defineAction("update").map(event->{return event;}).subscribe(subscriber);
-		resource.defineAction("delete").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("create",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("update",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("delete",event->{return event;}).subscribe(subscriber);
 		
 		Map params = new HashMap();
 		
@@ -577,11 +581,11 @@ public class ResourceTests {
 		
 		Resource resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
 		
-		resource.defineAction("create").map(event->{return event;}).subscribe(subscriber);
-		resource.defineAction("update").map(event->{return event;}).subscribe(subscriber);
-		resource.defineAction("delete").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("create",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("update",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("delete",event->{return event;}).subscribe(subscriber);
 		
 		Map params = new HashMap();
 		
@@ -633,11 +637,11 @@ public class ResourceTests {
 		
 		Resource<Event> resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
 		
-		resource.defineAction("create").map(event->{return event;}).subscribe(subscriber);
-		resource.defineAction("update").map(event->{return event;}).subscribe(subscriber);
-		resource.defineAction("delete").map(event->{return event;}).subscribe(subscriber);
+		resource.defineAction("create",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("update",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("delete",event->{return event;}).subscribe(subscriber);
 		
 		Map params = new HashMap();
 		
@@ -702,7 +706,7 @@ public class ResourceTests {
 		Resource<Event> flightResource = new RxResource("Flight","1.0");
 		
 		//add the actions
-		Observable<Event> flight_get = flightResource.defineAction("GET").map(event->{
+		Observable<Event> flight_get = flightResource.defineAction("GET",event->{
 			
 			//write the logic here
 			System.out.println("Received Event : "+event.getEventName());
@@ -765,7 +769,7 @@ public class ResourceTests {
 		Resource<Event> flightResource = new RxResource("Flight","1.0");
 		
 		//add the actions
-		Observable<Event> flight_get = flightResource.defineAction("GET").map(event->{
+		Observable<Event> flight_get = flightResource.defineAction("GET",event->{
 			
 			//write the logic here
 			System.out.println("Received Event : "+event.getEventName());
@@ -852,7 +856,7 @@ public class ResourceTests {
 		
 	}
 	
-	@Test
+/*	@Test
 	public void test_Rest_Flight_Resource_GET_multiple_flatmap() throws ResourceException{
 		
 		TestSubscriber flightGetSubscriber1 = new TestSubscriber();
@@ -861,7 +865,7 @@ public class ResourceTests {
 		Resource<Event> flightResource = new RxResource("Flight","1.0");
 		
 		
-		Observable<Event> flight_get = flightResource.defineAction("GET").flatMap(event->{
+		Observable<Event> flight_get = flightResource.defineAction("GET",event->{
 			
 			return Observable.create(new OnSubscribe<Event>(){
 
@@ -1138,5 +1142,5 @@ public class ResourceTests {
 		assertTrue(String.format("Expected response does not match actual : %s, Expected : %d",defaultEvents.size(),4),defaultEvents.size() == 4);
 
 
-	}
+	}*/
 }

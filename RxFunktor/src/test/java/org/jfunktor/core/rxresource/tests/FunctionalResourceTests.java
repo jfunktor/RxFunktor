@@ -41,10 +41,10 @@ public class FunctionalResourceTests {
         List<Item> itemDB = createItemDB();
         int orderIdCounter = 0;
 
-        Resource orders = new RxResource(RESOURCE_ORDERS, ORDERS_VERSION);
+        Resource<Event> orders = new RxResource(RESOURCE_ORDERS, ORDERS_VERSION);
 
         //orders resource actions
-        Observable<Event> getAction = orders.defineAction(GET).map(safely(event->{
+        Observable<Event> getAction = orders.defineAction(GET,event->{
 
             Map details = event.getEventDetails();
 
@@ -100,10 +100,10 @@ public class FunctionalResourceTests {
             responseDetails.put(Event.SOURCE_EVENT,event);
             Event resultEvent = new Event(ORDERS_EVENT,responseDetails);
             return resultEvent;
-        }));
+        });
 
 
-        Observable<Event> postAction = orders.defineAction(POST).map(safely(event->{
+        Observable<Event> postAction = orders.defineAction(POST,event->{
             Map details = event.getEventDetails();
 
             if(details.get(Event.EVENT_TYPE) == null || (!((String)details.get(Event.EVENT_TYPE)).equalsIgnoreCase("post-orders"))){
@@ -122,7 +122,7 @@ public class FunctionalResourceTests {
             Event resultEvent = new Event(NEW_ORDER_EVENT,responseDetails);
 
             return resultEvent;
-        }));
+        });
 
         return orders;
     }

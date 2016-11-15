@@ -5,6 +5,7 @@ import org.jfunktor.core.resource.api.ResourceException;
 import org.jfunktor.core.rx.resource.api.Resource;
 import rx.Observable;
 import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 import rx.subjects.PublishSubject;
 import rx.subjects.SerializedSubject;
 import rx.subjects.Subject;
@@ -21,7 +22,8 @@ public class RxResource implements Resource<Event> {
 	private Subject<Event,Event> resourceSubject = new SerializedSubject<Event,Event>(PublishSubject.create());
 	//private Subject<Event,Event> defaultSubject = null;
 	private Map<String,ActionEntry<Event>> actionMap = new ConcurrentHashMap<String, ActionEntry<Event>>();
-	private Observable<Event> eventObservable;
+	//private Observable<Event> eventObservable;
+	private Func1<Event,Event> switchFunction;
 	private static final String DEFAULT_FUNCTION = "_default_";
 
 	 
@@ -30,11 +32,14 @@ public class RxResource implements Resource<Event> {
 		private String name;
 		private boolean isActive;
 		private Func1<Event,Event> function;
+		private Observable<Event> observable;
 
 		
-		private ActionEntry(String name,Func1<Event,Event> function){
+		private ActionEntry(String name,Func1<Event,Event> function,Observable<Event> obs){
 			this.name = name;
 			isActive = true;
+			this.function = function;
+			observable = obs;
 		}
 
 		boolean isActive() {
@@ -51,6 +56,10 @@ public class RxResource implements Resource<Event> {
 
 		public Func1<Event, Event> getFunction() {
 			return function;
+		}
+
+		public Observable<Event> getObservable() {
+			return observable;
 		}
 
 		@Override
@@ -96,17 +105,20 @@ public class RxResource implements Resource<Event> {
 	public RxResource(String resourcename, String version) {
 		resource = resourcename;
 		this.version = version;
-		this.eventObservable = createEventObservable();
+		defineDefaultAction();
+		switchFunction = createSwitchFunction();
 	}
 
-	private Observable<Event> createEventObservable() {
+	private Func1<Event,Event> createSwitchFunction() {
 
-		return resourceSubject.map(safely(event->{
+		return safely(event->{
 
 			Func1<Event,Event> functionToInvoke = null;
 			String eventLower = event.getEventName().toLowerCase();
 			ActionEntry<Event> actionEntry = actionMap.get(eventLower);
-			if(actionEntry != null && actionEntry.isActive()){ //means defined and active
+			Event resultEvent = actionEntry.getFunction().call(event);
+			return resultEvent;
+			/*if(actionEntry != null && actionEntry.isActive()){ //means defined and active
 				//get the action and invoke it
 				functionToInvoke = actionEntry.getFunction();
 			}else{
@@ -121,8 +133,8 @@ public class RxResource implements Resource<Event> {
 				return resultEvent;
 			}else{
 				throw new IllegalStateException(String.format("Resource %s-%s is in an illegal state. No function to handle event %s",resource,version,event));
-			}
-		}));
+			}*/
+		});
 	}
 
 	@Override
@@ -135,15 +147,28 @@ public class RxResource implements Resource<Event> {
 
 		assertDefaultActionName(actionLower);
 
-		if(isActionDefined(actionLower))
-			throw new ResourceException(String.format("Action %s is already defined and active", actionLower));
+		return defineActionInternal(actionLower, actionFunction,event->{return hasSubscribers(actionLower,event);});
+	}
 
+	private boolean hasSubscribers(String action,Event event){
+		boolean retVal = false;
+		if (isActionActive(action) && event.getEventName().equalsIgnoreCase(action)) {
+			retVal = true;
+		}
+		return retVal;
+	}
 
-		ActionEntry actionEntry = new ActionEntry(action,actionFunction);
-		
-		actionMap.put(actionLower, actionEntry);
-		
-		return eventObservable;
+	private Observable<Event> defineActionInternal(String action, Func1<Event, Event> actionFunction,Func1<Event,Boolean> filterFunction) throws ResourceException {
+		if(isActionDefined(action))
+			throw new ResourceException(String.format("Action %s is already defined and active", action));
+
+		Observable<Event> actionObservable = resourceSubject.filter(filterFunction).map(switchFunction);
+
+		ActionEntry actionEntry = new ActionEntry(action,actionFunction,actionObservable);
+
+		actionMap.put(action, actionEntry);
+
+		return actionObservable;
 	}
 
 	private void assertActionNullOrEmpty(String action) {
@@ -220,7 +245,10 @@ public class RxResource implements Resource<Event> {
 		}
 		
 		//remove the action from the list of action map
-		actionMap.remove(actionLower);
+		ActionEntry<Event> removedEntry = actionMap.remove(actionLower);
+
+		//now unsubscribe the observable from source
+		removedEntry.getObservable().unsubscribeOn(Schedulers.immediate());
 	}
 
 	@Override
@@ -248,7 +276,8 @@ public class RxResource implements Resource<Event> {
 
 	@Override
 	public Observable<Event> getDefaultAction() {
-		return eventObservable;
+
+		return actionMap.get(DEFAULT_FUNCTION).getObservable();
 	}
 
 	@Override
@@ -258,12 +287,24 @@ public class RxResource implements Resource<Event> {
 			throw new ResourceException(String.format("Action %s is not defined", action));
 		}
 
-		return eventObservable;
+		return actionMap.get(actionLower).getObservable();
 	}
 
 
-	private Func1<Event,Event> defineDefaultAction() {
-		return event->{return event;}; //do nothing action just pass on the event as it is
+	private void defineDefaultAction() {
+		try {
+			Func1<Event,Event> defaultAction = event -> {
+				return event;
+			};
+
+			Observable<Event> defaultActionObs = defineActionInternal(DEFAULT_FUNCTION,defaultAction,event->{return !hasSubscribers(event.getEventName(),event);});
+
+			ActionEntry<Event> actionEntry = new ActionEntry(DEFAULT_FUNCTION,defaultAction,defaultActionObs);
+			actionMap.put(DEFAULT_FUNCTION,actionEntry);
+
+		}catch (Exception e){
+			throw new RuntimeException("Unable to define default action. Something seriously wrong!",e);
+		}
 	}
 
 
