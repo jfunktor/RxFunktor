@@ -4,6 +4,9 @@ import org.jfunktor.core.events.api.Event;
 import org.jfunktor.core.resource.api.ResourceException;
 import org.jfunktor.core.rx.resource.api.Resource;
 import rx.Observable;
+import rx.Observer;
+import rx.Subscriber;
+import rx.Subscription;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 import rx.subjects.PublishSubject;
@@ -138,7 +141,7 @@ public class RxResource implements Resource<Event> {
 	}
 
 	@Override
-	public Observable<Event> defineAction(String action,Func1<Event,Event> actionFunction) throws ResourceException {
+	public Resource<Event> defineAction(String action,Func1<Event,Event> actionFunction) throws ResourceException {
 
 		assert actionFunction != null : "Action function cannot be null";
 		assertActionNullOrEmpty(action);
@@ -147,7 +150,9 @@ public class RxResource implements Resource<Event> {
 
 		assertDefaultActionName(actionLower);
 
-		return defineActionInternal(actionLower, actionFunction,event->{return hasSubscribers(actionLower,event);});
+		defineActionInternal(actionLower, actionFunction,event->{return hasSubscribers(actionLower,event);});
+
+		return this;
 	}
 
 	private boolean hasSubscribers(String action,Event event){
@@ -162,7 +167,8 @@ public class RxResource implements Resource<Event> {
 		if(isActionDefined(action))
 			throw new ResourceException(String.format("Action %s is already defined and active", action));
 
-		Observable<Event> actionObservable = resourceSubject.filter(filterFunction).map(switchFunction);
+		Observable<Event> actionObservable = resourceSubject.filter(filterFunction).map(log(action,safely(actionFunction)));
+
 
 		ActionEntry actionEntry = new ActionEntry(action,actionFunction,actionObservable);
 
@@ -247,8 +253,9 @@ public class RxResource implements Resource<Event> {
 		//remove the action from the list of action map
 		ActionEntry<Event> removedEntry = actionMap.remove(actionLower);
 
+
 		//now unsubscribe the observable from source
-		removedEntry.getObservable().unsubscribeOn(Schedulers.immediate());
+		//removedEntry.getObservable().
 	}
 
 	@Override
@@ -290,14 +297,29 @@ public class RxResource implements Resource<Event> {
 		return actionMap.get(actionLower).getObservable();
 	}
 
+	@Override
+	public Subscription subscribe(String action, Observer<Event> observer) throws ResourceException {
+		String actionLower = action.toLowerCase();
+
+		if(!isActionDefined(actionLower)){
+			throw new ResourceException(String.format("Action %s is not defined", action));
+		}
+
+		return actionMap.get(actionLower).getObservable().subscribe(observer);
+	}
+
 
 	private void defineDefaultAction() {
 		try {
 			Func1<Event,Event> defaultAction = event -> {
+				System.out.println("Default Action  : event "+event);
 				return event;
 			};
 
-			Observable<Event> defaultActionObs = defineActionInternal(DEFAULT_FUNCTION,defaultAction,event->{return !hasSubscribers(event.getEventName(),event);});
+			Observable<Event> defaultActionObs = defineActionInternal(DEFAULT_FUNCTION,defaultAction,event->{
+				System.out.println("Default Action Filter : "+event);
+				return !hasSubscribers(event.getEventName(),event);
+			});
 
 			ActionEntry<Event> actionEntry = new ActionEntry(DEFAULT_FUNCTION,defaultAction,defaultActionObs);
 			actionMap.put(DEFAULT_FUNCTION,actionEntry);
@@ -329,4 +351,27 @@ public class RxResource implements Resource<Event> {
 			}
 		};
 	}
+
+
+	/**
+	 * Wraps the given function with a log call
+	 * @param in
+	 * @return
+	 */
+	public static Func1<Event,Event> log(String prefix,Func1<Event,Event> in){
+		return new Func1<Event, Event>() {
+			@Override
+			public Event call(Event event) {
+				log(String.format("%s: In Event : %s",prefix,event));
+				Event outEvent = in.call(event);
+				log(String.format("%s: Out Event : %s",prefix,outEvent));
+				return outEvent;
+			}
+		};
+	}
+
+	private static void log(String msg) {
+		System.out.println(msg);
+	}
+
 }

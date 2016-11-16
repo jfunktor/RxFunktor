@@ -92,8 +92,9 @@ public class ResourceTests {
 			event.getEventDetails().put("REQUESTOR", "RAM");
 			return event;
 			
-		})
-		.onErrorReturn(error->{
+		});
+
+		resource.getAction("find").onErrorReturn(error->{
 			HashMap dataMap = new HashMap();
 			dataMap.put("Error", error);
 			Event errorEvent = new Event("Error",dataMap);
@@ -141,8 +142,9 @@ public class ResourceTests {
 			event.getEventDetails().put("REQUESTOR", "RAM");
 			return event;
 			
-		})
-		.onErrorResumeNext(error->{
+		});
+
+        resource.getAction("find").onErrorResumeNext(error->{
 			return Observable.create(subs->{
 				HashMap dataMap = new HashMap();
 				dataMap.put("Error", error);
@@ -348,10 +350,17 @@ public class ResourceTests {
 		Subscription defaultSubscription = resource.getDefaultAction().subscribe(defaultSubscriber);
 
 		Map params = new HashMap();
+		params.put("id","1");
 		
 		Event event = new Event("find",params);
 		
 		resource.onNext(event);
+
+		params = new HashMap();
+		params.put("id","2");
+
+		event = new Event("find",params);
+
 		resource.onNext(event);
 		
 		subscriber.assertNoErrors();
@@ -366,34 +375,60 @@ public class ResourceTests {
 		//subscriber.unsubscribe();
 		resource.undefineAction("find");
 
+		params = new HashMap();
+		params.put("id","3");
+
 		event = new Event("find",params);
 		
 		resource.onNext(event);
+
+		params = new HashMap();
+		params.put("id","4");
+
+		event = new Event("find",params);
+
 		resource.onNext(event);
 		
 		subscriber.assertNoErrors();
-		
+		defaultSubscriber.assertNoErrors();
+
 		responseEvents = subscriber.getOnNextEvents();
-		
+
+		List<Event> defaultResponseEvents = defaultSubscriber.getOnNextEvents();
+
 		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),2), responseEvents.size() == 2);
-		
+		assertTrue(String.format("Default Response does not match expected Actual %d, Expected %d", defaultResponseEvents.size(),2), defaultResponseEvents.size() == 2);
+
 		assertFalse("Resource action is activated",resource.isActionActive("find"));
 		assertFalse("Resource action is defined",resource.isActionDefined("find"));
 		
 		
 		//redefine the action
 		subscription = resource.defineAction("find",evt->{return evt;}).subscribe(subscriber);
-		
+
+		params = new HashMap();
+		params.put("id","5");
+
 		event = new Event("find",params);
 		
 		resource.onNext(event);
+
+		params = new HashMap();
+		params.put("id","6");
+
+		event = new Event("find",params);
+
 		resource.onNext(event);
 		
 		subscriber.assertNoErrors();
-		
+		defaultSubscriber.assertNoErrors();
+
 		responseEvents = subscriber.getOnNextEvents();
-		
+
+		defaultResponseEvents = defaultSubscriber.getOnNextEvents();
+
 		assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),2), responseEvents.size() == 2);
+		assertTrue(String.format("Default Response does not match expected Actual %d, Expected %d", defaultResponseEvents.size(),2), defaultResponseEvents.size() == 2);
 		assertTrue("Resource action is not activated",resource.isActionActive("find"));
 		assertTrue("Resource action is not defined",resource.isActionDefined("find"));
 
@@ -706,7 +741,7 @@ public class ResourceTests {
 		Resource<Event> flightResource = new RxResource("Flight","1.0");
 		
 		//add the actions
-		Observable<Event> flight_get = flightResource.defineAction("GET",event->{
+		flightResource.defineAction("GET",event->{
 			
 			//write the logic here
 			System.out.println("Received Event : "+event.getEventName());
@@ -722,10 +757,10 @@ public class ResourceTests {
 			Event responseEvent = new Event("RESPONSE",responseDetails);
 			return responseEvent;
 		});
-		
-		
-		
-		//now we can attach as many observers we want to the flight get
+
+        Observable<Event> flight_get = flightResource.getAction("GET");
+
+                //now we can attach as many observers we want to the flight get
 		Subscription flight_subscription = flight_get.subscribe(flightGetSubscriber);
 		
 		//this will usually be during the request call
@@ -769,7 +804,7 @@ public class ResourceTests {
 		Resource<Event> flightResource = new RxResource("Flight","1.0");
 		
 		//add the actions
-		Observable<Event> flight_get = flightResource.defineAction("GET",event->{
+		flightResource.defineAction("GET",event->{
 			
 			//write the logic here
 			System.out.println("Received Event : "+event.getEventName());
@@ -785,12 +820,12 @@ public class ResourceTests {
 			Event responseEvent = new Event("RESPONSE",responseDetails);
 			return responseEvent;
 		});
-		
-		
-		
-		
-		
-		//now we can attach as many observers we want to the flight get
+
+
+        Observable<Event> flight_get = flightResource.getAction("GET");
+
+
+                //now we can attach as many observers we want to the flight get
 		Subscription flight_subscription = flight_get.subscribe(flightGetSubscriber1);
 		
 		//this will usually be during the request call

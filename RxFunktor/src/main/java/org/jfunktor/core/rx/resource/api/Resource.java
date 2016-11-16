@@ -4,12 +4,16 @@ import org.jfunktor.core.events.api.Event;
 import org.jfunktor.core.resource.api.ResourceException;
 
 import rx.Observable;
+import rx.Observer;
+import rx.Subscriber;
+import rx.Subscription;
 import rx.functions.Func1;
+import rx.observers.TestSubscriber;
 
 
 public interface Resource<T> {
 	
-	public Observable<T> defineAction(String action, Func1<T,T> function)throws ResourceException;
+	public Resource<T> defineAction(String action, Func1<T,T> function)throws ResourceException;
 
 	public void onNext(T event);
 
@@ -28,5 +32,7 @@ public interface Resource<T> {
 
 	Observable<T> getDefaultAction();
 
-    Observable<Event> getAction(String action)throws ResourceException;
+    Observable<T> getAction(String action)throws ResourceException;
+
+	Subscription subscribe(String action, Observer<Event> observer)throws ResourceException;
 }

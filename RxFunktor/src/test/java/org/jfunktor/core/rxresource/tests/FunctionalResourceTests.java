@@ -44,7 +44,7 @@ public class FunctionalResourceTests {
         Resource<Event> orders = new RxResource(RESOURCE_ORDERS, ORDERS_VERSION);
 
         //orders resource actions
-        Observable<Event> getAction = orders.defineAction(GET,event->{
+        orders.defineAction(GET,event->{
 
             Map details = event.getEventDetails();
 
@@ -103,7 +103,7 @@ public class FunctionalResourceTests {
         });
 
 
-        Observable<Event> postAction = orders.defineAction(POST,event->{
+        orders.defineAction(POST,event->{
             Map details = event.getEventDetails();
 
             if(details.get(Event.EVENT_TYPE) == null || (!((String)details.get(Event.EVENT_TYPE)).equalsIgnoreCase("post-orders"))){
