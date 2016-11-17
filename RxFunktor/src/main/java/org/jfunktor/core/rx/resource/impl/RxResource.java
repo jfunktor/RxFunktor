@@ -6,20 +6,15 @@ import org.jfunktor.core.rx.resource.api.Action;
 import org.jfunktor.core.rx.resource.api.Resource;
 import rx.Observable;
 import rx.Observer;
-import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Func1;
-import rx.schedulers.Schedulers;
 import rx.subjects.PublishSubject;
 import rx.subjects.SerializedSubject;
 import rx.subjects.Subject;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import static org.jfunktor.core.rx.resource.api.Resource.DEFAULT_ACTION;
 
 public class RxResource implements Resource<Event> {
 
@@ -33,7 +28,7 @@ public class RxResource implements Resource<Event> {
 	private Func1<Event,Event> switchFunction;
 
 	 
-	private class ActionEntry<Event> implements Action<Event> {
+	class ActionEntry<Event> implements Action<Event> {
 		
 		private String name;
 		private boolean isActive;
@@ -56,7 +51,7 @@ public class RxResource implements Resource<Event> {
 				//create the new subscription and return it
 				Subscription rxSubscription = observable.subscribe(subscriber);
 
-				org.jfunktor.core.rx.resource.api.Subscription subs = new SubscriptionImpl(rxSubscription);
+				org.jfunktor.core.rx.resource.api.Subscription subs = new SubscriptionImpl(this,rxSubscription,subscriber);
 
 				//update the subscription map with the observer as the key
 				subscription.put(subscriber,subs);
@@ -76,6 +71,11 @@ public class RxResource implements Resource<Event> {
 		@Override
 		public void activate(boolean activate) {
 			isActive = activate;
+		}
+
+		@Override
+		public void unsubscribe(Observer<Event> subscriber) {
+
 		}
 
 		void setActive(boolean isActive) {
@@ -308,6 +308,16 @@ public class RxResource implements Resource<Event> {
 	@Override
 	public void onCompleted() {
 		resourceSubject.onCompleted();
+	}
+
+	@Override
+	public Action<Event> getDefaultAction() {
+		return null;
+	}
+
+	@Override
+	public Action<Event> getAction(String action) throws ResourceException {
+		return null;
 	}
 
 	/**@Override

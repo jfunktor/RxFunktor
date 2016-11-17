@@ -1,5 +1,6 @@
 package org.jfunktor.core.rx.resource.api;
 
+import org.jfunktor.core.events.api.Event;
 import rx.Observer;
 
 /**
@@ -14,4 +15,5 @@ public interface Action<T> {
     public void activate(boolean activate);
 
 
+    void unsubscribe(Observer<T> subscriber);
 }
