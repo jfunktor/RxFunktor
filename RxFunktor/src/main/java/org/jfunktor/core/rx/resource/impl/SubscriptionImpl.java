@@ -14,7 +14,7 @@ public class SubscriptionImpl implements org.jfunktor.core.rx.resource.api.Subsc
     private Action<Event> action;
     private Observer<Event> subscriber;
 
-    public  SubscriptionImpl(Action<Event> action, Subscription rxSubscription, Observer<Event> subscriber) {
+    public  SubscriptionImpl(Action action, Subscription rxSubscription, Observer<Event> subscriber) {
         this.action = action;
         this.subscriber = subscriber;
         subs = rxSubscription;

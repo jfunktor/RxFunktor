@@ -2,6 +2,7 @@ package org.jfunktor.core.rxresource.tests;
 
 import org.jfunktor.core.events.api.Event;
 import org.jfunktor.core.resource.api.ResourceException;
+import org.jfunktor.core.rx.resource.api.Action;
 import org.jfunktor.core.rx.resource.api.Resource;
 import org.jfunktor.core.rx.resource.impl.RxResource;
 import org.junit.Test;
@@ -232,7 +233,7 @@ public class FunctionalResourceTests {
     public void test_order_create()throws ResourceException{
         Resource orders = createOrderResource();
         TestSubscriber<Event> subscriber = new TestSubscriber<>();
-        Observable<Event> createAction = orders.getAction(POST);
+        Action<Event> createAction = orders.getAction(POST);
         createAction.subscribe(subscriber);
 
         Event createEvent = createNewOrderEvent("Vijay");
