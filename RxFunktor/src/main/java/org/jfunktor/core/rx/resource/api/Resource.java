@@ -1,27 +1,17 @@
 package org.jfunktor.core.rx.resource.api;
 
-import org.jfunktor.core.events.api.Event;
 import org.jfunktor.core.resource.api.ResourceException;
 
-import rx.Observable;
-import rx.Observer;
-import rx.Subscriber;
-import rx.Subscription;
 import rx.functions.Func1;
-import rx.observers.TestSubscriber;
 
 
 public interface Resource<T> {
+
+	public final String DEFAULT_ACTION = "_default_";
 	
-	public Resource<T> defineAction(String action, Func1<T,T> function)throws ResourceException;
+	public Action<T> defineAction(String action, Func1<T,T> function)throws ResourceException;
 
 	public void onNext(T event);
-
-	public void deactivateAction(String action)throws ResourceException;
-
-	public boolean isActionActive(String action);
-
-	public void activateAction(String action)throws ResourceException;
 
 	public void undefineAction(String action)throws ResourceException;
 
@@ -30,9 +20,11 @@ public interface Resource<T> {
 	public void onCompleted();
 
 
-	Observable<T> getDefaultAction();
+	public Action<T> getDefaultAction();
 
-    Observable<T> getAction(String action)throws ResourceException;
+    public Action<T> getAction(String action)throws ResourceException;
 
-	Subscription subscribe(String action, Observer<Event> observer)throws ResourceException;
+	//public Subscription subscribe(String action, Observer<Event> observer)throws ResourceException;
+
+	//public void unsubscribe(String action,Subscription subscription )throws ResourceException;
 }

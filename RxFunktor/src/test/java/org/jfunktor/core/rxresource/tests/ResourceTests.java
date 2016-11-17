@@ -29,12 +29,13 @@ public class ResourceTests {
 	@Test
 	public void test_simple_resource() throws ResourceException {
 		
-		TestSubscriber subscriber = new TestSubscriber();
+		TestSubscriber<Event> subscriber = new TestSubscriber();
 		
 		Resource<Event> resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
-		
+		resource.defineAction("find",event->{return event;}).subscribe("find",subscriber);
+
+
 		Map params = new HashMap();
 		
 		Event event = new Event("find",params);
@@ -57,7 +58,7 @@ public class ResourceTests {
 		
 		Resource<Event> resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find",event->{ event.getEventDetails().put("REQUESTOR", "RAM");return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{ event.getEventDetails().put("REQUESTOR", "RAM");return event;}).subscribe("find",subscriber);
 		
 		Map params = new HashMap();
 		params.put("REQUESTOR", "SAM");
@@ -94,7 +95,7 @@ public class ResourceTests {
 			
 		});
 
-		resource.getAction("find").onErrorReturn(error->{
+		resource.onErrorReturn("find",error->{
 			HashMap dataMap = new HashMap();
 			dataMap.put("Error", error);
 			Event errorEvent = new Event("Error",dataMap);
@@ -144,7 +145,7 @@ public class ResourceTests {
 			
 		});
 
-        resource.getAction("find").onErrorResumeNext(error->{
+        resource.onErrorResumeNext("find",error->{
 			return Observable.create(subs->{
 				HashMap dataMap = new HashMap();
 				dataMap.put("Error", error);
@@ -242,7 +243,7 @@ public class ResourceTests {
         resource.defineAction("find",safely(event->{
             event.getEventDetails().put("REQUESTOR", "RAM");
             return event;
-        })).subscribe(subscriber);
+        })).subscribe("find",subscriber);
 
         Map params = new HashMap();
         params.put("REQUESTOR", "SAM");
@@ -346,8 +347,8 @@ public class ResourceTests {
 		TestSubscriber<Event> defaultSubscriber = new TestSubscriber();
 		
 		Resource resource = new RxResource("Flight","1.0");
-		Subscription subscription = resource.defineAction("find",event->{return event;}).subscribe(subscriber);
-		Subscription defaultSubscription = resource.getDefaultAction().subscribe(defaultSubscriber);
+		Subscription subscription = resource.defineAction("find",event->{return event;}).subscribe("find",subscriber);
+		Subscription defaultSubscription = resource.subscribe(,defaultSubscriber);
 
 		Map params = new HashMap();
 		params.put("id","1");
@@ -404,7 +405,7 @@ public class ResourceTests {
 		
 		
 		//redefine the action
-		subscription = resource.defineAction("find",evt->{return evt;}).subscribe(subscriber);
+		subscription = resource.defineAction("find",evt->{return evt;}).subscribe("find",subscriber);
 
 		params = new HashMap();
 		params.put("id","5");
@@ -442,7 +443,7 @@ public class ResourceTests {
 		TestSubscriber<Event> subscriber = new TestSubscriber();
 		
 		Resource resource = new RxResource("Flight","1.0");
-		Subscription subscription = resource.defineAction("find",event->{return event;}).subscribe(subscriber);
+		Subscription subscription = resource.defineAction("find",event->{return event;}).subscribe("find",subscriber);
 
 		Map params = new HashMap();
 		
@@ -502,7 +503,7 @@ public class ResourceTests {
 		TestSubscriber<Event> subscriber = new TestSubscriber();
 		
 		Resource resource = new RxResource("Flight","1.0");
-		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe("find",subscriber);
 
 		Map params = new HashMap();
 		
@@ -574,11 +575,11 @@ public class ResourceTests {
 		
 		RxResource resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe("find",subscriber);
 		
-		resource.defineAction("create",event->{return event;}).subscribe(subscriber);
-		resource.defineAction("update",event->{return event;}).subscribe(subscriber);
-		resource.defineAction("delete",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("create",event->{return event;}).subscribe("find",subscriber);
+		resource.defineAction("update",event->{return event;}).subscribe("find",subscriber);
+		resource.defineAction("delete",event->{return event;}).subscribe("find",subscriber);
 		
 		Map params = new HashMap();
 		
@@ -616,11 +617,11 @@ public class ResourceTests {
 		
 		Resource resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe("find",subscriber);
 		
-		resource.defineAction("create",event->{return event;}).subscribe(subscriber);
-		resource.defineAction("update",event->{return event;}).subscribe(subscriber);
-		resource.defineAction("delete",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("create",event->{return event;}).subscribe("find",subscriber);
+		resource.defineAction("update",event->{return event;}).subscribe("find",subscriber);
+		resource.defineAction("delete",event->{return event;}).subscribe("find",subscriber);
 		
 		Map params = new HashMap();
 		
@@ -672,11 +673,11 @@ public class ResourceTests {
 		
 		Resource<Event> resource = new RxResource("Flight","1.0");
 		
-		resource.defineAction("find",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("find",event->{return event;}).subscribe("find",subscriber);
 		
-		resource.defineAction("create",event->{return event;}).subscribe(subscriber);
-		resource.defineAction("update",event->{return event;}).subscribe(subscriber);
-		resource.defineAction("delete",event->{return event;}).subscribe(subscriber);
+		resource.defineAction("create",event->{return event;}).subscribe("find",subscriber);
+		resource.defineAction("update",event->{return event;}).subscribe("find",subscriber);
+		resource.defineAction("delete",event->{return event;}).subscribe("find",subscriber);
 		
 		Map params = new HashMap();
 		
@@ -758,10 +759,10 @@ public class ResourceTests {
 			return responseEvent;
 		});
 
-        Observable<Event> flight_get = flightResource.getAction("GET");
+        //Observable<Event> flight_get = flightResource.getAction("GET");
 
                 //now we can attach as many observers we want to the flight get
-		Subscription flight_subscription = flight_get.subscribe(flightGetSubscriber);
+		Subscription flight_subscription = flightResource.subscribe("GET",flightGetSubscriber);
 		
 		//this will usually be during the request call
 		Map<String,Object> requestDetails = new HashMap();
@@ -822,11 +823,11 @@ public class ResourceTests {
 		});
 
 
-        Observable<Event> flight_get = flightResource.getAction("GET");
+        //Observable<Event> flight_get = flightResource.getAction("GET");
 
 
                 //now we can attach as many observers we want to the flight get
-		Subscription flight_subscription = flight_get.subscribe(flightGetSubscriber1);
+		Subscription flight_subscription = flightResource.subscribe("GET",flightGetSubscriber1);
 		
 		//this will usually be during the request call
 		Map<String,Object> requestDetails = new HashMap();
@@ -858,7 +859,7 @@ public class ResourceTests {
 
 		//simulating second request immediately
 		//now we can attach as many observers we want to the flight get
-		flight_subscription = flight_get.subscribe(flightGetSubscriber2);
+		flight_subscription = flightResource.subscribe("GET",flightGetSubscriber2);
 		
 		//this will usually be during the request call
 		requestDetails = new HashMap();
