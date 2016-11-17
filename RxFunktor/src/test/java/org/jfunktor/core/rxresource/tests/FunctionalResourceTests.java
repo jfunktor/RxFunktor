@@ -107,7 +107,7 @@ public class FunctionalResourceTests {
         orders.defineAction(POST,event->{
             Map details = event.getEventDetails();
 
-            if(details.get(Event.EVENT_TYPE) == null || (!((String)details.get(Event.EVENT_TYPE)).equalsIgnoreCase("post-orders"))){
+            if(details.get(Event.EVENT_TYPE) == null || (!((String)details.get(Event.EVENT_TYPE)).equalsIgnoreCase("new-order"))){
                 Map<String,Object> errordetails = new HashMap();
                 errordetails.put(Event.ERROR,new IllegalArgumentException("Invalid arguments for event"));
                 Event evt = new Event(Event.ERROR_EVENT,errordetails);
@@ -160,7 +160,21 @@ public class FunctionalResourceTests {
     }
 
     private List<LineItem> getLineItems(List<Item> itemsdb,List<String> itemsList) {
-        Stream<LineItem> lineItemStream = itemsList.stream().map(itemid->{
+        Stream<Item> itemStream = itemsdb.stream().filter(item -> {
+            boolean retVal = false;
+            if(itemsList.contains(item.getItemId())){
+                retVal = true;
+            }
+            return retVal;
+        });
+
+        ArrayList<LineItem> lineItems = new ArrayList();
+        itemStream.forEach(obj->{
+            lineItems.add(new LineItem(obj.getItemId(),obj.getItemName(),obj.getItemDescription(),1));
+        });
+
+        return lineItems;
+        /*Stream<LineItem> lineItemStream = itemsList.stream().map(itemid->{
             Stream<Item> items = itemsdb.stream().filter(item -> {
                 boolean retVal = false;
                 if(item.getItemId().equalsIgnoreCase(itemid)){
@@ -176,7 +190,9 @@ public class FunctionalResourceTests {
                 return null;
             }
         });
-        return lineItemStream.collect(Collectors.toList());
+
+
+        return lineItemStream.collect(Collectors.toList());*/
     }
 
     private Address getAddress(Map<String, String> addressMap) {
@@ -246,7 +262,7 @@ public class FunctionalResourceTests {
         assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
 
         Event evt = responseEvents.get(0);
-        assertTrue(String.format("Response event name is not as expected. Action %s, Expected %s",evt.getEventName(),"new-order"),evt.getEventName().equalsIgnoreCase("new-oder"));
+        assertTrue(String.format("Response event name is not as expected. Action %s, Expected %s",evt.getEventName(),"new-order"),evt.getEventName().equalsIgnoreCase("new-order"));
         System.out.println("Event details : "+evt.getEventDetails());
     }
 
@@ -260,13 +276,15 @@ public class FunctionalResourceTests {
 
         List<String> itemlist = new ArrayList();
         itemlist.add("2");
-        itemlist.add("9");
+        itemlist.add("6");
 
         Map<String,Object> details = new HashMap<>();
         details.put(Event.EVENT_TYPE,"new-order");
         details.put("shipperName",shippedto);
         details.put("shipperAddress",address);
         details.put("deliverBy","10-12-2016");
+        details.put("items",itemlist);
+
         Event createevent = new Event("POST",details);
         return createevent;
     }
