@@ -39,5 +39,8 @@ dependencies {
     compile "org.apache.commons:commons-vfs2:$vfs"
 	compile "io.reactivex:rxjava:$rxjava"
 	compile "com.google.guava:guava:$guava"
-
+    compile "com.fasterxml.jackson.core:jackson-core:$jackson"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson"
+    compile "com.fasterxml.jackson.core:jackson-annotations:$jackson"
+    compile "com.googlecode.cqengine:cqengine:$cqengine"
 }

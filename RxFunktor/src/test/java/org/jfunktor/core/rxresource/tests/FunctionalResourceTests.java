@@ -1,14 +1,20 @@
 package org.jfunktor.core.rxresource.tests;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.googlecode.cqengine.attribute.Attribute;
+import com.googlecode.cqengine.query.Query;
+
+import static com.googlecode.cqengine.query.QueryFactory.*;
+
 import org.jfunktor.core.events.api.Event;
 import org.jfunktor.core.resource.api.ResourceException;
 import org.jfunktor.core.rx.resource.api.Action;
 import org.jfunktor.core.rx.resource.api.Resource;
 import org.jfunktor.core.rx.resource.impl.RxResource;
 import org.junit.Test;
-import rx.Observable;
 import rx.observers.TestSubscriber;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -16,7 +22,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.jfunktor.core.rx.resource.impl.RxResource.safely;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -266,6 +271,16 @@ public class FunctionalResourceTests {
         System.out.println("Event details : "+evt.getEventDetails());
     }
 
+    @Test
+    public void test_orderdb() throws IOException {
+        OrderDB orderDB = OrderDB.createOrderDB("/Orders1.json");
+        Query<Order> query = equal(Order.ORDER_ID,"1");
+        for (Order order : orderDB.retrieve(query)) {
+            System.out.println("Order "+order);
+            assertTrue(String.format("Order id %s is not what was expected %s",order.getOrderId(),"1"),order.getOrderId().equals("1"));
+        }
+    }
+
     private Event createNewOrderEvent(String shippedto) {
 
         Map<String,String> address = new HashMap<>();
@@ -288,6 +303,8 @@ public class FunctionalResourceTests {
         Event createevent = new Event("POST",details);
         return createevent;
     }
+
+
 
 
     @Test
@@ -326,11 +343,26 @@ class Order{
     private String orderId;
     private String shipperName;
     private Address shipperAddress;
+
+    @JsonFormat(shape= JsonFormat.Shape.STRING, pattern="dd/MM/yyyy")
     private Date deliverBy;
+
+    @JsonFormat(shape= JsonFormat.Shape.STRING, pattern="dd/MM/yyyy")
     private Date orderDate;
+
     private List<LineItem> items;
 
+    static final Attribute<Order,String> ORDER_ID = attribute("orderId",order->{return order.orderId;});
+
+    static final Attribute<Order,String> SHIPPER_NAME = attribute("shipperName",order->{return order.shipperName;});
+
+    static final Attribute<Order,String> SHIPPER_CITY = attribute("shipperCity",order->{return order.shipperAddress.getCity();});
+
+    static final Attribute<Order,String> SHIPPER_COUNTRY = attribute("shipperCountry",order->{return order.shipperAddress.getCountry();});
+
     private static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
+
+    public Order(){}
 
     public Order(String orderId, String shipperName, Address shipperAddress, List<LineItem> items) {
         this.orderId = orderId;
@@ -401,6 +433,30 @@ class Order{
         return orderDate;
     }
 
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public void setShipperName(String shipperName) {
+        this.shipperName = shipperName;
+    }
+
+    public void setShipperAddress(Address shipperAddress) {
+        this.shipperAddress = shipperAddress;
+    }
+
+    public void setDeliverBy(Date deliverBy) {
+        this.deliverBy = deliverBy;
+    }
+
+    public void setOrderDate(Date orderDate) {
+        this.orderDate = orderDate;
+    }
+
+    public void setItems(List<LineItem> items) {
+        this.items = items;
+    }
+
     @Override
     public String toString() {
         return "Order{" +
@@ -417,6 +473,8 @@ class Address{
     private String address2;
     private String city;
     private String country;
+
+    public Address(){};
 
     public Address(String address1, String address2, String city, String country) {
         this.address1 = address1;
@@ -439,6 +497,22 @@ class Address{
 
     public String getCountry() {
         return country;
+    }
+
+    public void setAddress1(String address1) {
+        this.address1 = address1;
+    }
+
+    public void setAddress2(String address2) {
+        this.address2 = address2;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
     }
 
     @Override
@@ -464,6 +538,8 @@ class LineItem{
         this.quantity = quantity;
     }
 
+    public LineItem(){}
+
     public String getItemId() {
         return itemId;
     }
@@ -478,6 +554,22 @@ class LineItem{
 
     public int getQuantity() {
         return quantity;
+    }
+
+    public void setItemId(String itemId) {
+        this.itemId = itemId;
+    }
+
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
+    }
+
+    public void setItemDescription(String itemDescription) {
+        this.itemDescription = itemDescription;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 
     @Override
