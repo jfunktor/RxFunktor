@@ -52,4 +52,7 @@ public class OrderDB {
     }
 
 
+    public void add(Order newOrder) {
+        orders.add(newOrder);
+    }
 }

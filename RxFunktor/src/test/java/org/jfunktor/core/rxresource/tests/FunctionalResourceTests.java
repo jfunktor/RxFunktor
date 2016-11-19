@@ -6,6 +6,7 @@ import com.googlecode.cqengine.query.Query;
 
 import static com.googlecode.cqengine.query.QueryFactory.*;
 
+import com.googlecode.cqengine.resultset.ResultSet;
 import org.jfunktor.core.events.api.Event;
 import org.jfunktor.core.resource.api.ResourceException;
 import org.jfunktor.core.rx.resource.api.Action;
@@ -42,9 +43,13 @@ public class FunctionalResourceTests {
 
     private static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 
-    private Resource<Event> createOrderResource() throws ResourceException {
-        List<Order> orderDB = createOrderDB();
-        List<Item> itemDB = createItemDB();
+    private Resource<Event> createOrderResource() throws ResourceException, IOException {
+        //List<Order> orderDB = createOrderDB();
+        //List<Item> itemDB = createItemDB();
+
+        OrderDB orderDB = createOrderDB();
+        ItemDB itemDB = createItemDB();
+
         int orderIdCounter = 0;
 
         Resource<Event> orders = new RxResource(RESOURCE_ORDERS, ORDERS_VERSION);
@@ -134,20 +139,11 @@ public class FunctionalResourceTests {
     }
 
 
-    private List<Item> createItemDB() {
-        ArrayList<Item> items = new ArrayList<>();
-        items.add(new Item("1","Pencils","School Pencils",5000));
-        items.add(new Item("2","Notebooks","School Notebooks",2000));
-        items.add(new Item("3","Box","School Box",15000));
-        items.add(new Item("4","Chocolates","Kinder Joy chocolates",2000));
-        items.add(new Item("5","Bags","School Bags",1500));
-        items.add(new Item("6","Shoes","School Shoes",50));
-        items.add(new Item("7","Sport-Shoes","School Sport shoes",1500));
-        items.add(new Item("8","Chalk","Blackboard chalks",25000));
-        return items;
+    private ItemDB createItemDB() throws IOException {
+        return ItemDB.createItemDB("/Items1.json");
     }
 
-    private Order createNewOrder(List<Order> orderdb,List<Item> itemsdb,int orderIdCounter,Map<String,Object> details){
+    private Order createNewOrder(OrderDB orderdb,ItemDB itemsdb,int orderIdCounter,Map<String,Object> details){
         String shipperName = (String)details.get("shipperName");
         Map<String,String> addressMap = (Map<String,String>)details.get("shipperAddress");
         String deliverBy = (String)details.get("deliverBy");
@@ -164,19 +160,23 @@ public class FunctionalResourceTests {
 
     }
 
-    private List<LineItem> getLineItems(List<Item> itemsdb,List<String> itemsList) {
-        Stream<Item> itemStream = itemsdb.stream().filter(item -> {
+    private List<LineItem> getLineItems(ItemDB itemsdb,List<String> itemsList) {
+        /*Stream<Item> itemStream = itemsdb.stream().filter(item -> {
             boolean retVal = false;
             if(itemsList.contains(item.getItemId())){
                 retVal = true;
             }
             return retVal;
-        });
+        });*/
+
+        Query itemQuery = in(Item.ITEM_ID,itemsList);
+        ResultSet<Item> items = itemsdb.retrieve(itemQuery);
 
         ArrayList<LineItem> lineItems = new ArrayList();
-        itemStream.forEach(obj->{
-            lineItems.add(new LineItem(obj.getItemId(),obj.getItemName(),obj.getItemDescription(),1));
+        items.forEach(item->{
+            lineItems.add(new LineItem(item.getItemId(),item.getItemName(),item.getItemDescription(),1));
         });
+
 
         return lineItems;
         /*Stream<LineItem> lineItemStream = itemsList.stream().map(itemid->{
@@ -215,13 +215,30 @@ public class FunctionalResourceTests {
     }
 
 
-    private List<Order> createOrderDB() {
+    /*private List<Order> createOrderDB() {
         ArrayList<Order> orders = new ArrayList();
         return orders;
+    }*/
+
+    private OrderDB createOrderDB() throws IOException {
+        OrderDB orderDB = OrderDB.createOrderDB("/Orders1.json");
+        return orderDB;
     }
 
-    private List<Order> getMatchingOrders(List<Order> orderDB,String shippedTo, Date deliverFromDate, Date deliverToDate) {
-        Stream<Order> orderStream = orderDB.stream().filter(order -> {
+    private List<Order> getMatchingOrders(OrderDB orderDB,String shippedTo, Date deliverFromDate, Date deliverToDate) {
+
+        Query<Order> query = and(between(Order.DELIVER_BY,deliverFromDate,true,deliverToDate,true),equal(Order.SHIPPER_NAME,shippedTo));
+
+        ArrayList<Order> results = new ArrayList();
+
+        ResultSet<Order> retrievedResults = orderDB.retrieve(query);
+        retrievedResults.forEach(order -> {
+            results.add(order);
+        });
+
+        return results;
+
+        /*Stream<Order> orderStream = orderDB.stream().filter(order -> {
             boolean retVal = false;
             if ((order.getDeliverBy().after(deliverFromDate) && order.getDeliverBy().before(deliverToDate))
                     || order.getDeliverBy().equals(deliverFromDate)) {
@@ -235,7 +252,7 @@ public class FunctionalResourceTests {
             }
             return retVal;
         });
-        return orderStream.collect(Collectors.toList());
+        return orderStream.collect(Collectors.toList());*/
     }
 
      private Order findOrderById(List<Order> orderDB,String orderid){
@@ -251,7 +268,7 @@ public class FunctionalResourceTests {
     }
 
     @Test
-    public void test_order_create()throws ResourceException{
+    public void test_order_create() throws ResourceException, IOException {
         Resource orders = createOrderResource();
         TestSubscriber<Event> subscriber = new TestSubscriber<>();
         Action<Event> createAction = orders.getAction(POST);
@@ -313,8 +330,41 @@ public class FunctionalResourceTests {
     }
 
     @Test
-    public void test_order_query(){
+    public void test_order_query() throws ResourceException, IOException {
+        Resource orders = createOrderResource();
+        TestSubscriber<Event> subscriber = new TestSubscriber<>();
+        Action<Event> getAction = orders.getAction(GET);
+        getAction.subscribe(subscriber);
 
+        Event createEvent = createQueryOrderEvent("Vijay");
+
+        orders.onNext(createEvent);
+
+        subscriber.assertNoErrors();
+        List<Event> responseEvents = subscriber.getOnNextEvents();
+
+        assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
+
+        Event evt = responseEvents.get(0);
+        assertTrue(String.format("Response event name is not as expected. Action %s, Expected %s",evt.getEventName(),"new-order"),evt.getEventName().equalsIgnoreCase("new-order"));
+        System.out.println("Event details : "+evt.getEventDetails());
+    }
+
+    private Event createQueryOrderEvent(String shippername) {
+        Map<String,String> address = new HashMap<>();
+        address.put("address1","New York");
+        address.put("address2","Washington");
+        address.put("city","New York");
+        address.put("country","USA");
+
+        Map<String,Object> details = new HashMap<>();
+        details.put(Event.EVENT_TYPE,"get-order");
+        details.put("shipped-to",shippername);
+        details.put("deliver-from","10/10/2017");
+        details.put("deliver-to","10/11/2017");
+
+        Event getevent = new Event("GET",details);
+        return getevent;
     }
 }
 
@@ -359,6 +409,8 @@ class Order{
     static final Attribute<Order,String> SHIPPER_CITY = attribute("shipperCity",order->{return order.shipperAddress.getCity();});
 
     static final Attribute<Order,String> SHIPPER_COUNTRY = attribute("shipperCountry",order->{return order.shipperAddress.getCountry();});
+
+    static final Attribute<Order,Date> DELIVER_BY = attribute("deliverBy",order->{return order.deliverBy;});
 
     private static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 

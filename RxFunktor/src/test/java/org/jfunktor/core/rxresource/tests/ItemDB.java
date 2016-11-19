@@ -4,7 +4,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.index.hash.HashIndex;
+import com.googlecode.cqengine.index.navigable.NavigableIndex;
 import com.googlecode.cqengine.index.suffix.SuffixTreeIndex;
+import com.googlecode.cqengine.query.Query;
+import com.googlecode.cqengine.resultset.ResultSet;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,5 +45,12 @@ public class ItemDB {
         items.addIndex(HashIndex.onAttribute(Item.ITEM_NAME));
         items.addIndex(SuffixTreeIndex.onAttribute(Item.ITEM_NAME));
         items.addIndex(SuffixTreeIndex.onAttribute(Item.ITEM_DESCRIPTION));
+        items.addIndex(NavigableIndex.onAttribute(Item.ITEM_QUANTITY));
     }
+
+    public ResultSet<Item> retrieve(Query<Item> query){
+        ResultSet<Item> resultSet = items.retrieve(query);
+        return resultSet;
+    }
+
 }
