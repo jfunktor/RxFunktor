@@ -589,6 +589,16 @@ class Item{
     private String itemDescription;
     private int quantity;
 
+    static final Attribute<Item,String> ITEM_ID = attribute("itemId",item->{return item.itemId;});
+
+    static final Attribute<Item,String> ITEM_NAME = attribute("itemName",item->{return item.itemName;});
+
+    static final Attribute<Item,String> ITEM_DESCRIPTION = attribute("itemDescription",item->{return item.itemDescription;});
+
+    static final Attribute<Item,Integer> ITEM_QUANTITY = attribute("quantity",item->{return item.quantity;});
+
+    public Item(){}
+
     public Item(String itemId, String itemName, String itemDescription, int quantity) {
         this.itemId = itemId;
         this.itemName = itemName;
@@ -610,6 +620,22 @@ class Item{
 
     public int getQuantity() {
         return quantity;
+    }
+
+    public void setItemId(String itemId) {
+        this.itemId = itemId;
+    }
+
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
+    }
+
+    public void setItemDescription(String itemDescription) {
+        this.itemDescription = itemDescription;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 
     @Override

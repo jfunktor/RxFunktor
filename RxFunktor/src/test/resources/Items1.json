@@ -1,0 +1,62 @@
+[
+  {
+    "itemId":"1",
+    "itemName":"HBPencil",
+    "itemDescription":"HB School Pencils",
+    "quantity":"5000"
+  },
+  {
+    "itemId":"2",
+    "itemName":"Notebooks",
+    "itemDescription":"School Notebooks",
+    "quantity":"2000"
+  },
+  {
+    "itemId":"3",
+    "itemName":"Box",
+    "itemDescription":"School Box",
+    "quantity":"15000"
+  },
+  {
+    "itemId":"4",
+    "itemName":"Chocolates",
+    "itemDescription":"KinderJoy Chocolates",
+    "quantity":"2000"
+  },
+  {
+    "itemId":"5",
+    "itemName":"Bags",
+    "itemDescription":"School Bags",
+    "quantity":"1500"
+  },
+  {
+    "itemId":"6",
+    "itemName":"Shoes",
+    "itemDescription":"School Shoes",
+    "quantity":"50"
+  },
+  {
+    "itemId":"7",
+    "itemName":"Sport-Shoes",
+    "itemDescription":"School Sport Shoes",
+    "quantity":"1500"
+  },
+  {
+    "itemId":"8",
+    "itemName":"Chalk",
+    "itemDescription":"Blackboard Chalks",
+    "quantity":"25000"
+  },
+  {
+    "itemId":"9",
+    "itemName":"Chalk",
+    "itemDescription":"Blackboard Chalks",
+    "quantity":"25000"
+  },
+  {
+    "itemId":"10",
+    "itemName":"Whiteboard",
+    "itemDescription":"Whiteboard",
+    "quantity":"500"
+  }
+]
