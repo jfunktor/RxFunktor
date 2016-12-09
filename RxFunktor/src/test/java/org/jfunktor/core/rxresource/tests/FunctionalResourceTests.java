@@ -274,7 +274,7 @@ public class FunctionalResourceTests {
         Action<Event> createAction = orders.getAction(POST);
         createAction.subscribe(subscriber);
 
-        Event createEvent = createNewOrderEvent("Vijay");
+        Event createEvent = createNewOrderEvent("Raul Suberix");
 
         orders.onNext(createEvent);
 
@@ -346,7 +346,7 @@ public class FunctionalResourceTests {
         assertTrue(String.format("Response does not match expected Actual %d, Expected %d", responseEvents.size(),1), responseEvents.size() == 1);
 
         Event evt = responseEvents.get(0);
-        assertTrue(String.format("Response event name is not as expected. Action %s, Expected %s",evt.getEventName(),"new-order"),evt.getEventName().equalsIgnoreCase("new-order"));
+        assertTrue(String.format("Response event name is not as expected. Action %s, Expected %s",evt.getEventName(),"Orders"),evt.getEventName().equalsIgnoreCase("Orders"));
         System.out.println("Event details : "+evt.getEventDetails());
     }
 
@@ -358,10 +358,10 @@ public class FunctionalResourceTests {
         address.put("country","USA");
 
         Map<String,Object> details = new HashMap<>();
-        details.put(Event.EVENT_TYPE,"get-order");
+        details.put(Event.EVENT_TYPE,"get-orders");
         details.put("shipped-to",shippername);
-        details.put("deliver-from","10/10/2017");
-        details.put("deliver-to","10/11/2017");
+        details.put("deliver-from","10-10-2017");
+        details.put("deliver-to","10-11-2017");
 
         Event getevent = new Event("GET",details);
         return getevent;
